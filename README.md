@@ -4,7 +4,7 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Projeto em desenvolvimento, com a estrutura inicial do Laravel, autenticação Breeze Blade e build dos assets configurados. A configuração do banco e as funcionalidades de negócio estão em implementação.
+Projeto em desenvolvimento, com a estrutura inicial do Laravel, autenticação Breeze Blade e build dos assets configurados. Os bancos de desenvolvimento e testes estão configurados; as funcionalidades de negócio estão em implementação.
 
 ## Stack e versões verificadas
 
@@ -78,19 +78,19 @@ Não regenerar a chave de uma instalação em uso. Não executar `breeze:install
 
 ## Banco de dados
 
-A configuração padrão utiliza PostgreSQL em `127.0.0.1:5432`. Ajuste as credenciais no arquivo `.env` conforme seu ambiente.
+A aplicação utiliza PostgreSQL na Neon, configurado no `.env`. Os testes utilizam PostgreSQL local, com credenciais próprias no `.env.testing`. O `.env.example` contém valores locais de referência e senha vazia.
 
 | Configuração | Valor |
 |---|---|
 | Conexão | `pgsql` |
-| Banco de desenvolvimento | `theseguro_dev` |
-| Banco de testes | `theseguro_test` |
+| Banco da aplicação (Neon) | `neondb` |
+| Banco de testes (local) | `theseguro_dev` |
 | Sessões e cache | Arquivos locais |
 | Fila | `sync` |
 
-A configuração da conexão e a adaptação das migrations ao domínio estão pendentes. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. As migrations atuais são as originais do framework e ainda não representam o modelo de dados final.
+As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. Ambos os bancos estavam sem tabelas na verificação inicial. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. As demais entidades de negócio ainda serão implementadas. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
 
-Os testes de integração utilizam um banco separado, definido em `phpunit.xml`. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
+O `phpunit.xml` fixa os testes em `127.0.0.1:5432`, banco `theseguro_dev`, usuário `theseguro`, e desativa a URL de conexão alternativa. Esse banco local é exclusivo para testes e poderá ter suas tabelas recriadas pela suíte. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
 
 ## Execução local
 
@@ -124,3 +124,11 @@ A validação dos fluxos de autenticação, permissões e integridade PostgreSQL
 ## Contas de demonstração
 
 As contas de demonstração serão disponibilizadas após a implementação dos perfis de cliente, corretor e administrador.
+
+## Estrutura de usuários
+
+A migration de usuários foi aplicada no banco da aplicação. `users` possui chave primária `bigint`, e-mail único, papel padrão `cliente` e `is_active` padrão `true`. O Laravel mantém o histórico de execução em `migrations`, com chave primária inteira e campos `migration` e `batch`.
+
+As consultas em [estrutura-usuarios.sql](docs/consultas/estrutura-usuarios.sql) permitem inspecionar colunas e restrições no pgAdmin sem consultar dados de contas. A criação da estrutura não representa a conclusão das regras de autenticação e autorização.
+
+A tabela `password_reset_tokens` possui `email` como chave primária, `token` obrigatório e `created_at` opcional, seguindo o suporte de recuperação de senha do Laravel. A estrutura pode ser consultada com [estrutura-recuperacao-senha.sql](docs/consultas/estrutura-recuperacao-senha.sql), sem exibir tokens. O fluxo funcional de recuperação de senha ainda depende das verificações de autenticação.
