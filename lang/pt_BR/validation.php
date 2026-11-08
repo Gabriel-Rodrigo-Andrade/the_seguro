@@ -1,0 +1,3 @@
+<?php
+
+return ['required' => 'O campo :attribute é obrigatório.', 'email' => 'Informe um e-mail válido.', 'unique' => 'Este :attribute já está em uso.', 'enum' => 'O valor de :attribute é inválido.', 'boolean' => 'O campo :attribute deve ser verdadeiro ou falso.', 'confirmed' => 'A confirmação de :attribute não corresponde.', 'string' => 'O campo :attribute deve ser um texto.', 'lowercase' => 'O campo :attribute deve estar em minúsculas.', 'min' => ['string' => 'O campo :attribute deve ter pelo menos :min caracteres.'], 'max' => ['string' => 'O campo :attribute deve ter no máximo :max caracteres.'], 'attributes' => ['name' => 'nome', 'email' => 'e-mail', 'password' => 'senha', 'role' => 'perfil', 'is_active' => 'situação']];
