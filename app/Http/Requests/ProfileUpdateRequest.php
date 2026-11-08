@@ -14,6 +14,13 @@ class ProfileUpdateRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->email)) {
+            $this->merge(['email' => strtolower(trim($this->email))]);
+        }
+    }
+
     public function rules(): array
     {
         return [

@@ -4,7 +4,14 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Projeto em desenvolvimento, com a estrutura inicial do Laravel, autenticação Breeze Blade e build dos assets configurados. A configuração do banco e as funcionalidades de negócio estão em implementação.
+Autenticação e gestão de usuários implementadas, com testes automatizados aprovados. Fluxos conferidos manualmente; refinamentos visuais previstos para uma revisão posterior.
+
+- Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
+- Login, logout e edição do próprio perfil, sem exclusão física da conta.
+- Administradores podem cadastrar, listar, consultar, editar, desativar e reativar usuários.
+- Contas inativas não entram e têm sessões existentes invalidadas no próximo acesso.
+- O último administrador ativo não pode ser desativado ou rebaixado. Alterações administrativas são serializadas em transação PostgreSQL.
+- Cliente e corretor possuem painel inicial e perfil; veículos, propostas e assistência serão implementados nas próximas versões.
 
 ## Stack e versões verificadas
 
@@ -15,7 +22,7 @@ Projeto em desenvolvimento, com a estrutura inicial do Laravel, autenticação B
 | Laravel Framework / Blade / Eloquent | 13.40.0 | MVC, templates e persistência |
 | Laravel skeleton | 13.11.0 | Origem do scaffold |
 | Laravel Breeze | 2.4.2 | Scaffold de autenticação Blade |
-| PostgreSQL | 15.18 | Banco de dados relacional |
+| PostgreSQL | 18.6 (Neon) / 15.18 (local) | Aplicação / testes |
 | Node.js | 22.19.0 | Runtime via NVM, fixado em `.nvmrc` |
 | npm | 10.9.3 | Dependências frontend |
 | Vite | 8.3.6 | Build e servidor de assets |
@@ -78,23 +85,23 @@ Não regenerar a chave de uma instalação em uso. Não executar `breeze:install
 
 ## Banco de dados
 
-A configuração padrão utiliza PostgreSQL em `127.0.0.1:5432`. Ajuste as credenciais no arquivo `.env` conforme seu ambiente.
+A aplicação utiliza PostgreSQL na Neon, configurado no `.env`. Os testes utilizam PostgreSQL local, com credenciais próprias no `.env.testing`. O `.env.example` contém valores locais de referência e senha vazia.
 
 | Configuração | Valor |
 |---|---|
 | Conexão | `pgsql` |
-| Banco de desenvolvimento | `theseguro_dev` |
-| Banco de testes | `theseguro_test` |
+| Banco da aplicação (Neon) | `neondb` |
+| Banco de testes (local) | `theseguro_dev` |
 | Sessões e cache | Arquivos locais |
 | Fila | `sync` |
 
-A configuração da conexão e a adaptação das migrations ao domínio estão pendentes. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. As migrations atuais são as originais do framework e ainda não representam o modelo de dados final.
+As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. Ambos os bancos estavam sem tabelas na verificação inicial. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. As demais entidades de negócio ainda serão implementadas. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
 
-Os testes de integração utilizam um banco separado, definido em `phpunit.xml`. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
+O `phpunit.xml` fixa os testes em `127.0.0.1:5432`, banco `theseguro_dev`, usuário `theseguro`, e desativa a URL de conexão alternativa. Esse banco local é exclusivo para testes e poderá ter suas tabelas recriadas pela suíte. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
 
 ## Execução local
 
-Para visualizar o scaffold sem depender das tabelas:
+Após configurar o banco e instalar os assets:
 
 ```bash
 php artisan serve --host=127.0.0.1 --port=8000
@@ -107,20 +114,68 @@ nvm use
 npm run dev
 ```
 
-Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrigatório manter Vite em execução para servir os assets compilados. Login, cadastro e demais operações persistentes dependem da conclusão da configuração do banco.
+Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrigatório manter Vite em execução para servir os assets compilados. A aplicação usa a conexão definida no `.env`. A interface está em português e utiliza os componentes Blade do Breeze.
 
 ## Verificações realizadas
 
 - `composer validate --strict`: manifesto válido.
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
-- `php artisan route:list --except-vendor`: 20 rotas do scaffold registradas.
-- `php artisan test --filter=ExampleTest`: 2 testes, 2 asserções aprovados; sem recriação de banco.
+- `php artisan route:list --except-vendor`: 26 rotas; nenhuma rota de exclusão física de usuários.
+- `vendor/bin/phpunit`: 37 testes, 140 asserções aprovados no PostgreSQL local.
+- `vendor/bin/pint --test app tests`: formatação verificada.
 - `php artisan view:cache`: templates Blade compilados.
 - `npm run build`: assets gerados com sucesso.
 
-A validação dos fluxos de autenticação, permissões e integridade PostgreSQL está pendente. Os testes básicos verificam apenas a inicialização da aplicação.
+A suíte cobre autenticação dos três perfis, recuperação e alteração de senha com notificações simuladas, bloqueio de visitante e conta inativa, privilégios no cadastro/perfil, acesso administrativo, preservação do último administrador ativo, desativação sem exclusão e reexecução dos seeders. A concorrência é protegida por bloqueio transacional; não foi realizado teste de carga concorrente. O funcionamento da interface foi conferido manualmente. O refinamento estético permanece planejado.
 
 ## Contas de demonstração
 
-As contas de demonstração serão disponibilizadas após a implementação dos perfis de cliente, corretor e administrador.
+O `UserSeeder` cria as seguintes contas fictícias, todas ativas:
+
+| Perfil | E-mail |
+|---|---|
+| Cliente 1 | `cliente1@theseguro.test` |
+| Cliente 2 | `cliente2@theseguro.test` |
+| Corretor | `corretor@theseguro.test` |
+| Administrador | `admin@theseguro.test` |
+
+Senha demonstrativa das quatro contas: `TheSeguro@123`. Uso exclusivo no ambiente acadêmico de demonstração. As senhas são armazenadas com hash; o seeder preserva contas existentes, identificadas pelo e-mail, sem redefinir senhas ou papéis.
+
+A carga foi executada e os hashes foram verificados. Login e permissões foram validados por testes HTTP automatizados no banco local. A consulta [perfis-demonstracao.sql](docs/consultas/perfis-demonstracao.sql) exibe somente os dados necessários para conferir os perfis.
+
+## Estrutura de usuários
+
+A migration de usuários foi aplicada no banco da aplicação. `users` possui chave primária `bigint`, e-mail único, papel padrão `cliente` e `is_active` padrão `true`. O Laravel mantém o histórico de execução em `migrations`, com chave primária inteira e campos `migration` e `batch`.
+
+As consultas em [estrutura-usuarios.sql](docs/consultas/estrutura-usuarios.sql) permitem inspecionar colunas e restrições no pgAdmin sem consultar dados de contas. As permissões são aplicadas por middleware, Form Requests e UserPolicy no servidor.
+
+A tabela `password_reset_tokens` possui `email` como chave primária, `token` obrigatório e `created_at` opcional, seguindo o suporte de recuperação de senha do Laravel. A estrutura pode ser consultada com [estrutura-recuperacao-senha.sql](docs/consultas/estrutura-recuperacao-senha.sql), sem exibir tokens. A recuperação de senha foi validada em testes com notificações simuladas; envio real de e-mail não foi configurado.
+
+## Preparação de uma instalação nova
+
+Em um banco novo, exclusivo da aplicação, depois de conferir as credenciais no `.env`, aplique as migrations e opcionalmente carregue as contas demonstrativas:
+
+```bash
+php artisan migrate
+php artisan db:seed --class=UserSeeder
+```
+
+Esses comandos não são necessários nos bancos que já receberam as migrations e a carga. As contas demonstrativas têm senha pública e são destinadas somente à demonstração acadêmica.
+
+## Testes locais
+
+Configure um PostgreSQL local exclusivo para testes. O banco usado nesta configuração é `theseguro_dev`, com usuário `theseguro`. Em uma nova instalação, prepare o arquivo de ambiente:
+
+```bash
+test -f .env.testing || cp .env.testing.example .env.testing
+# Preencha DB_PASSWORD no arquivo local, sem incluí-lo no Git.
+php artisan key:generate --env=testing
+vendor/bin/phpunit
+```
+
+Gere a chave apenas ao preparar um arquivo novo. A suíte pode recriar as tabelas desse banco local. Uma verificação anterior à inicialização dos testes recusa conexão remota, outro banco e configuração em cache; chamadas HTTP externas também são bloqueadas nos testes. A Neon não é utilizada pela suíte.
+
+## Conferência da interface
+
+Acesse `/login`, entre com cada perfil demonstrativo e confira o painel e o logout. Com administrador, confira `/admin/users`, cadastro, detalhes, edição e mensagens de validação. Confira `/profile` e a navegação em tela estreita. Clientes e corretores não devem acessar `/admin/users`.

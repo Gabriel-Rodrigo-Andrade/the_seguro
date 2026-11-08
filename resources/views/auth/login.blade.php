@@ -1,4 +1,6 @@
 <x-guest-layout>
+    <h1 class="text-xl font-semibold mb-4">Entrar no TheSeguro</h1>
+    <p class="mb-4"><a class="underline text-indigo-700" href="{{ route('register') }}">Criar uma conta</a></p>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
