@@ -4,14 +4,16 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Autenticação e gestão de usuários implementadas, com testes automatizados aprovados. Fluxos conferidos manualmente; refinamentos visuais previstos para uma revisão posterior.
+Autenticação, gestão de usuários e cadastro de veículos implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
 
 - Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
 - Login, logout e edição do próprio perfil, sem exclusão física da conta.
 - Administradores podem cadastrar, listar, consultar, editar, desativar e reativar usuários.
 - Contas inativas não entram e têm sessões existentes invalidadas no próximo acesso.
 - O último administrador ativo não pode ser desativado ou rebaixado. Alterações administrativas são serializadas em transação PostgreSQL.
-- Cliente e corretor possuem painel inicial e perfil; veículos, propostas e assistência serão implementados nas próximas versões.
+- Clientes gerenciam os próprios veículos; administradores gerenciam veículos de clientes. Há busca por placa, marca e modelo, paginação e cadastro manual.
+- O proprietário não pode ser trocado após o cadastro. Clientes com veículos não podem mudar de papel.
+- Propostas, contratos e assistência serão implementados nas próximas versões.
 
 ## Stack e versões verificadas
 
@@ -95,7 +97,7 @@ A aplicação utiliza PostgreSQL na Neon, configurado no `.env`. Os testes utili
 | Sessões e cache | Arquivos locais |
 | Fila | `sync` |
 
-As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. Ambos os bancos estavam sem tabelas na verificação inicial. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. As demais entidades de negócio ainda serão implementadas. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
+As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. Ambos os bancos estavam sem tabelas na verificação inicial. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. A tabela `vehicles` mantém veículos vinculados a clientes, com placa única. As demais entidades de negócio ainda serão implementadas. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
 
 O `phpunit.xml` fixa os testes em `127.0.0.1:5432`, banco `theseguro_dev`, usuário `theseguro`, e desativa a URL de conexão alternativa. Esse banco local é exclusivo para testes e poderá ter suas tabelas recriadas pela suíte. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
 
@@ -121,13 +123,14 @@ Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrig
 - `composer validate --strict`: manifesto válido.
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
-- `php artisan route:list --except-vendor`: 26 rotas; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 37 testes, 140 asserções aprovados no PostgreSQL local.
+- `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
+- `vendor/bin/phpunit`: 73 testes, 316 asserções aprovados no PostgreSQL local.
 - `vendor/bin/pint --test app tests`: formatação verificada.
+- `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
 - `php artisan view:cache`: templates Blade compilados.
 - `npm run build`: assets gerados com sucesso.
 
-A suíte cobre autenticação dos três perfis, recuperação e alteração de senha com notificações simuladas, bloqueio de visitante e conta inativa, privilégios no cadastro/perfil, acesso administrativo, preservação do último administrador ativo, desativação sem exclusão e reexecução dos seeders. A concorrência é protegida por bloqueio transacional; não foi realizado teste de carga concorrente. O funcionamento da interface foi conferido manualmente. O refinamento estético permanece planejado.
+A suíte cobre autenticação dos três perfis, recuperação e alteração de senha com notificações simuladas, bloqueio de visitante e conta inativa, privilégios no cadastro/perfil, acesso administrativo, preservação do último administrador ativo, desativação sem exclusão e reexecução dos seeders. A concorrência é protegida por bloqueio transacional; não foi realizado teste de carga concorrente. Os testes também cobrem CRUD e propriedade dos veículos, consulta sem persistência, respostas completas/parciais, erros, timeout, limite de requisições e cadastro manual após falha. Os testes JavaScript verificam aplicação explícita das sugestões, preservação dos campos, descarte de respostas atrasadas e ausência de repetição automática. A demonstração visual da consulta simulada foi registrada; não foi realizada inspeção automatizada do layout. O refinamento estético permanece planejado.
 
 ## Contas de demonstração
 
@@ -154,11 +157,11 @@ A tabela `password_reset_tokens` possui `email` como chave primária, `token` ob
 
 ## Preparação de uma instalação nova
 
-Em um banco novo, exclusivo da aplicação, depois de conferir as credenciais no `.env`, aplique as migrations e opcionalmente carregue as contas demonstrativas:
+Em um banco novo, exclusivo da aplicação, depois de conferir as credenciais no `.env`, aplique as migrations e opcionalmente carregue as contas e os veículos demonstrativos:
 
 ```bash
 php artisan migrate
-php artisan db:seed --class=UserSeeder
+php artisan db:seed
 ```
 
 Esses comandos não são necessários nos bancos que já receberam as migrations e a carga. As contas demonstrativas têm senha pública e são destinadas somente à demonstração acadêmica.
@@ -172,6 +175,8 @@ test -f .env.testing || cp .env.testing.example .env.testing
 # Preencha DB_PASSWORD no arquivo local, sem incluí-lo no Git.
 php artisan key:generate --env=testing
 vendor/bin/phpunit
+nvm use
+node --test tests/Frontend/vehicle-lookup.test.mjs
 ```
 
 Gere a chave apenas ao preparar um arquivo novo. A suíte pode recriar as tabelas desse banco local. Uma verificação anterior à inicialização dos testes recusa conexão remota, outro banco e configuração em cache; chamadas HTTP externas também são bloqueadas nos testes. A Neon não é utilizada pela suíte.
@@ -179,3 +184,36 @@ Gere a chave apenas ao preparar um arquivo novo. A suíte pode recriar as tabela
 ## Conferência da interface
 
 Acesse `/login`, entre com cada perfil demonstrativo e confira o painel e o logout. Com administrador, confira `/admin/users`, cadastro, detalhes, edição e mensagens de validação. Confira `/profile` e a navegação em tela estreita. Clientes e corretores não devem acessar `/admin/users`.
+
+## Estrutura de veículos
+
+A tabela `vehicles` foi criada com placa única, marca, modelo, ano de fabricação e proprietário vinculado a `users`. Cor e ano-modelo são opcionais. A chave estrangeira impede excluir uma conta com veículos associados; `user_id` possui índice para consulta por proprietário.
+
+O CRUD está disponível em `/vehicles`. Clientes acessam somente seus veículos; administradores escolhem um cliente ativo no cadastro. O corretor ainda não possui veículos consultáveis, pois o fluxo de propostas está previsto para uma próxima versão. Nenhuma consulta externa foi realizada. As consultas de inspeção estão em `docs/consultas/estrutura-veiculos.sql` no ambiente local.
+
+O `VehicleSeeder` cria dois veículos fictícios, identificados pelas placas `ABC1D23` e `DEF5678`, vinculados respectivamente aos dois clientes demonstrativos. O primeiro possui cor e ano-modelo; o segundo mantém esses campos opcionais vazios. A carga exige que os clientes estejam ativos e preserva registros existentes, sem consultar APIs.
+
+Os testes em `VehicleDatabaseTest` verificam placa única, FK de proprietário, restrição de exclusão, preservação na reexecução e rollback quando falta um proprietário. Resultado: 5 testes e 17 asserções aprovados no PostgreSQL local. O banco demonstrativo recebeu somente dados válidos. A consulta local `docs/consultas/veiculos-proprietarios.sql` mostra a relação entre veículos e proprietários.
+
+## Consulta de placa
+
+A consulta auxilia o cadastro e não grava veículos. As sugestões aparecem para revisão; o botão **Aplicar sugestões revisadas** preenche marca, modelo e cor. Fabricação e ano-modelo devem ser confirmados manualmente: o campo `year` do fornecedor não distingue esses dois conceitos. Campos ausentes não apagam valores preenchidos, e a substituição de valores exige confirmação.
+
+Configuração no `.env`:
+
+```dotenv
+FIPE_API_MODE=mock
+FIPE_API_TOKEN=
+FIPE_API_CONNECT_TIMEOUT=3
+FIPE_API_TIMEOUT=8
+```
+
+- `mock`: padrão, sem acesso externo e com identificação de simulação. `XYZ1A23` retorna sugestões completas fictícias; `DEF5678` demonstra uma resposta parcial.
+- `disabled`: consulta indisponível; cadastro manual continua funcionando.
+- `live`: requer token do fornecedor em `FIPE_API_TOKEN`, usado somente no servidor. Sem token, nenhuma consulta externa é feita. Nunca use prefixo `VITE_` para esse segredo.
+
+Após alterar configurações, execute `php artisan config:clear`. A integração utiliza `GET /api/v2/plates/{plate}` e o header `X-Subscription-Token`. A [documentação da busca por placa](https://fipe.api.br/docs/api/busca-por-placa-alpha), consultada em novembro de 2026, informa 10 consultas bem-sucedidas por mês no plano gratuito com token; confirme as condições atuais antes do uso real. A aplicação exige token no modo live e não utiliza acesso anônimo.
+
+O endpoint local aceita até três consultas por minuto por usuário. Não há repetição automática nem redirecionamento para outro endpoint. Falhas, ausência de dados e cota esgotada mantêm o preenchimento manual disponível. Salvar um veículo e executar seeders não chama a API. A consulta repetida da mesma placa sem alteração na página reutiliza as sugestões recebidas.
+
+Validação realizada com `Http::fake()` e bloqueio de chamadas externas. **Chamada real pendente.** Para conferir a simulação, acesse `/vehicles/create`, informe `XYZ1A23` e clique em **Consultar placa**. Confira as sugestões antes de aplicar e informe os anos manualmente. Teste também `DEF5678` para observar campos ausentes.

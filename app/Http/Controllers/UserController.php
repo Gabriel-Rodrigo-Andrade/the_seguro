@@ -74,10 +74,13 @@ class UserController extends Controller
         DB::transaction(function () use ($request, $user, $attributes, $ability) {
             // Serializa alterações administrativas para preservar o último administrador ativo.
             DB::statement('LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE');
-            $user->refresh();
+            $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($request->user()->fresh())->authorize($ability, $user);
             $user->forceFill($attributes);
             $this->ensureActiveAdministratorRemains($user);
+            if ($user->isDirty('role') && $user->getOriginal('role') === UserRole::Customer && $user->vehicles()->exists()) {
+                throw ValidationException::withMessages(['role' => 'Um cliente com veículos não pode mudar de perfil.']);
+            }
             if ($user->isDirty('email')) {
                 $user->email_verified_at = null;
             }

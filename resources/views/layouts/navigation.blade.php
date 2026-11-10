@@ -15,6 +15,7 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Painel') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">Veículos</x-nav-link>
                     @can('viewAny', App\Models\User::class)
                     <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">Usuários</x-nav-link>
                     @endcan
@@ -78,6 +79,7 @@
         @can('viewAny', App\Models\User::class)
         <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">Usuários</x-responsive-nav-link>
         @endcan
+        <x-responsive-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">Veículos</x-responsive-nav-link>
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">

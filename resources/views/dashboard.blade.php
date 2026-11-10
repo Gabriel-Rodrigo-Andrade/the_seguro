@@ -5,8 +5,9 @@
 @if($errors->any())<div role="alert" class="text-red-700"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 <h1 class="text-2xl font-semibold">Olá, {{ auth()->user()->name }}.</h1>
 <p>Seu perfil: <strong>{{ auth()->user()->role->label() }}</strong>.</p>
-<p>Bem-vindo ao TheSeguro. As funcionalidades de veículos, propostas e assistência serão disponibilizadas nas próximas versões.</p>
+<p>Bem-vindo ao TheSeguro. O cadastro de veículos já está disponível. Propostas e assistência serão disponibilizadas nas próximas versões.</p>
 @can('viewAny', App\Models\User::class)<a class="underline text-indigo-700" href="{{ route('users.index') }}">Gerenciar usuários</a>@endcan
+<p><a class="underline" href="{{ route('vehicles.index') }}">Consultar veículos</a></p>
 <p><a class="underline" href="{{ route('profile.edit') }}">Editar meu perfil</a></p>
 </div></div></div>
 </x-app-layout>
