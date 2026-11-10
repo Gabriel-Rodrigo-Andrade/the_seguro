@@ -69,6 +69,7 @@ class PlanController extends Controller
     private function save(Plan $plan, array $attributes): Plan
     {
         return DB::transaction(function () use ($plan, $attributes) {
+            DB::statement('LOCK TABLE proposals IN SHARE ROW EXCLUSIVE MODE');
             if ($plan->exists) {
                 $plan = Plan::whereKey($plan->id)->lockForUpdate()->firstOrFail();
             }
@@ -89,7 +90,11 @@ class PlanController extends Controller
     {
         Gate::authorize('delete', $plan);
         DB::transaction(function () use ($plan) {
+            DB::statement('LOCK TABLE proposals IN SHARE ROW EXCLUSIVE MODE');
             $plan = Plan::whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            if ($plan->proposals()->exists()) {
+                throw ValidationException::withMessages(['plan' => 'Plano com propostas não pode ser excluído. Você pode desativá-lo.']);
+            }
             $plan->services()->detach();
             $plan->delete();
         });

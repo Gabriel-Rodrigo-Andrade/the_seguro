@@ -75,7 +75,16 @@ class VehicleController extends Controller
 
     public function update(UpdateVehicleRequest $request, Vehicle $vehicle): RedirectResponse
     {
-        $vehicle->update($request->validated());
+        DB::transaction(function () use ($request, $vehicle) {
+            DB::statement('LOCK TABLE proposals IN SHARE ROW EXCLUSIVE MODE');
+            $vehicle = Vehicle::whereKey($vehicle->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($request->user()->fresh())->authorize('update', $vehicle);
+            $vehicle->fill($request->validated());
+            if ($vehicle->isDirty() && $vehicle->proposals()->where('status', '!=', 'draft')->exists()) {
+                throw ValidationException::withMessages(['vehicle' => 'Veículo com proposta enviada não pode ser alterado.']);
+            }
+            $vehicle->save();
+        });
 
         return to_route('vehicles.show', $vehicle)->with('status', 'Veículo atualizado.');
     }
@@ -83,7 +92,14 @@ class VehicleController extends Controller
     public function destroy(Vehicle $vehicle): RedirectResponse
     {
         Gate::authorize('delete', $vehicle);
-        $vehicle->delete();
+        DB::transaction(function () use ($vehicle) {
+            DB::statement('LOCK TABLE proposals IN SHARE ROW EXCLUSIVE MODE');
+            $vehicle = Vehicle::whereKey($vehicle->id)->lockForUpdate()->firstOrFail();
+            if ($vehicle->proposals()->exists()) {
+                throw ValidationException::withMessages(['vehicle' => 'Veículo com proposta não pode ser excluído.']);
+            }
+            $vehicle->delete();
+        });
 
         return to_route('vehicles.index')->with('status', 'Veículo excluído.');
     }

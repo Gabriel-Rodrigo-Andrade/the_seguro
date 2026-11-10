@@ -20,16 +20,20 @@ class VehiclePolicy
 
     public function view(User $user, Vehicle $vehicle): bool
     {
+        if ($user->is_active && $user->role === UserRole::Broker) {
+            return $vehicle->proposals()->where('status', '!=', 'draft')->exists();
+        }
+
         return $this->create($user) && ($user->role === UserRole::Administrator || $vehicle->user_id === $user->id);
     }
 
     public function update(User $user, Vehicle $vehicle): bool
     {
-        return $this->view($user, $vehicle);
+        return $this->create($user) && $this->view($user, $vehicle);
     }
 
     public function delete(User $user, Vehicle $vehicle): bool
     {
-        return $this->view($user, $vehicle);
+        return $this->create($user) && $this->view($user, $vehicle);
     }
 }

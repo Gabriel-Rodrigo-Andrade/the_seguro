@@ -5,9 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
 {
+    public function proposals(): HasMany
+    {
+        return $this->hasMany(Proposal::class);
+    }
+
     protected $fillable = ['name', 'description', 'annual_price', 'is_active'];
 
     protected function casts(): array
