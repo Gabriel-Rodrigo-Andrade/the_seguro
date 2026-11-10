@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'fipe' => [
+        'mode' => env('FIPE_LOOKUP_MODE', 'mock'),
+        'token' => env('FIPE_API_TOKEN'),
+        'connect_timeout' => env('FIPE_CONNECT_TIMEOUT', 3),
+        'timeout' => env('FIPE_TIMEOUT', 8),
+    ],
 
     /*
     |--------------------------------------------------------------------------
