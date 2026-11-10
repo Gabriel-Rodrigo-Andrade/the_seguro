@@ -5,7 +5,7 @@
 @if($errors->any())<div role="alert" class="text-red-700"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 <h1 class="text-2xl font-semibold">Olá, {{ auth()->user()->name }}.</h1>
 <p>Seu perfil: <strong>{{ auth()->user()->role->label() }}</strong>.</p>
-<p>Bem-vindo ao TheSeguro. O cadastro de veículos e o catálogo de planos já estão disponíveis. Cotações e envio de propostas estão disponíveis. Análise e assistência chegam nas próximas versões.</p>
+<p>Bem-vindo ao TheSeguro. O cadastro de veículos e o catálogo de planos já estão disponíveis. Cotações e envio de propostas estão disponíveis. A análise de propostas está disponível para corretores e administradores. Contratação e assistência chegam nas próximas versões.</p>
 @can('viewAny', App\Models\User::class)<a class="underline text-indigo-700" href="{{ route('users.index') }}">Gerenciar usuários</a>@endcan
 <p><a class="underline" href="{{ route('vehicles.index') }}">Consultar veículos</a></p>
 <p><a class="underline" href="{{ route('plans.index') }}">Consultar planos</a></p>

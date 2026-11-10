@@ -15,6 +15,17 @@
 <p>Preço anual enviado: <strong>R$ {{ number_format((float)$proposal->quoted_amount, 2, ',', '.') }}</strong></p><p>Enviada em {{ $proposal->submitted_at?->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }}</p>
 <h4 class="font-semibold">Composição preservada no envio</h4><ul class="list-disc pl-5">@foreach($proposal->services_snapshot ?? [] as $service)<li>{{ $service['name'] }} — {{ $service['description'] }}</li>@endforeach</ul><p>A proposta enviada não pode mais ser editada ou excluída.</p>
 @endif
+@if($proposal->reviewed_at)
+<section class="border rounded-lg p-4 space-y-3"><h3 class="font-semibold">Resultado da análise</h3><p>{{ $proposal->status->label() }} por {{ $proposal->reviewer?->name }} em {{ $proposal->reviewed_at->timezone('America/Sao_Paulo')->format('d/m/Y H:i') }}.</p>
+@if($proposal->review_notes)<p class="whitespace-pre-line">{{ $proposal->review_notes }}</p>@endif</section>
+@endif
+@can('review', $proposal)
+<section class="border rounded-lg p-4 space-y-4"><h3 class="font-semibold">Analisar proposta</h3><p>Confira o veículo, o preço enviado e a composição histórica. A decisão não pode ser substituída depois de registrada.</p>
+<form method="POST" action="{{ route('proposals.review', $proposal) }}" class="max-w-xl space-y-4">@csrf @method('PATCH')
+<div><x-input-label for="decision" value="Decisão"/><select id="decision" name="decision" required class="w-full rounded-md border-gray-300"><option value="">Selecione</option><option value="approved" @selected(old('decision') === 'approved')>Aprovar</option><option value="rejected" @selected(old('decision') === 'rejected')>Recusar</option></select></div>
+<div><x-input-label for="review_notes" value="Justificativa (obrigatória ao recusar)"/><textarea id="review_notes" name="review_notes" maxlength="5000" rows="4" class="w-full rounded-md border-gray-300">{{ old('review_notes') }}</textarea></div>
+<x-primary-button>Registrar decisão</x-primary-button></form></section>
+@endcan
 @can('update', $proposal)<a class="underline" href="{{ route('proposals.edit', $proposal) }}">Editar rascunho</a>@endcan
 @can('delete', $proposal)<form method="POST" action="{{ route('proposals.destroy', $proposal) }}">@csrf @method('DELETE')<x-danger-button>Excluir rascunho</x-danger-button></form>@endcan
 <a class="underline" href="{{ route('proposals.index') }}">Voltar</a>

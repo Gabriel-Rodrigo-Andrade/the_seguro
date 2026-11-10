@@ -56,7 +56,7 @@ class ProposalController extends Controller
     public function show(Proposal $proposal, SubmitProposal $submit): View
     {
         Gate::authorize('view', $proposal);
-        $proposal->load(['customer', 'vehicle', 'plan.services']);
+        $proposal->load(['customer', 'vehicle', 'plan.services', 'reviewer']);
 
         return view('proposals.show', ['proposal' => $proposal, 'quoteToken' => $submit->confirmationToken($proposal)]);
     }

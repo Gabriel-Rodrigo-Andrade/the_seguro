@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProposalController;
+use App\Http\Controllers\ProposalReviewController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
@@ -16,6 +17,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('vehicles', VehicleController::class);
     Route::resource('plans', PlanController::class);
     Route::resource('proposals', ProposalController::class);
+    Route::middleware('role:corretor,administrador')->group(function () {
+        Route::get('/proposal-reviews', [ProposalReviewController::class, 'index'])->name('proposal-reviews.index');
+        Route::patch('/proposals/{proposal}/review', [ProposalReviewController::class, 'update'])->name('proposals.review');
+    });
     Route::post('/proposals/{proposal}/submit', [ProposalController::class, 'submit'])->name('proposals.submit');
     Route::resource('services', ServiceController::class);
     Route::get('/dashboard', DashboardController::class)->name('dashboard');

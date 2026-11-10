@@ -14,6 +14,16 @@ class ProposalPolicy
         return $user->is_active;
     }
 
+    public function reviewAny(User $user): bool
+    {
+        return $user->is_active && in_array($user->role, [UserRole::Broker, UserRole::Administrator], true);
+    }
+
+    public function review(User $user, Proposal $proposal): bool
+    {
+        return $this->reviewAny($user) && $proposal->status === ProposalStatus::Submitted;
+    }
+
     public function create(User $user): bool
     {
         return $user->is_active && $user->role === UserRole::Customer;
