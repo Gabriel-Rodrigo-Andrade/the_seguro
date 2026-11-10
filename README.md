@@ -4,7 +4,7 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotação/envio de propostas implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
+Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotação, envio e análise de propostas implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
 
 - Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
 - Login, logout e edição do próprio perfil, sem exclusão física da conta.
@@ -13,7 +13,7 @@ Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotaç�
 - O último administrador ativo não pode ser desativado ou rebaixado. Alterações administrativas são serializadas em transação PostgreSQL.
 - Clientes gerenciam os próprios veículos; administradores gerenciam veículos de clientes. Há busca por placa, marca e modelo, paginação e cadastro manual.
 - O proprietário não pode ser trocado após o cadastro. Clientes com veículos não podem mudar de papel.
-- Clientes podem cotar, salvar rascunhos e enviar propostas. Análise, contratos e assistência serão implementados nas próximas versões.
+- Clientes podem cotar, salvar rascunhos e enviar propostas. Corretores e administradores analisam propostas enviadas. Contratos e assistência serão implementados nas próximas versões.
 
 ## Stack e versões verificadas
 
@@ -124,7 +124,7 @@ Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrig
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
 - `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 97 testes, 576 asserções aprovados no PostgreSQL local.
+- `vendor/bin/phpunit`: 104 testes, 624 asserções aprovados no PostgreSQL local.
 - `vendor/bin/pint --test app tests`: formatação verificada.
 - `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
 - `php artisan view:cache`: templates Blade compilados.
@@ -228,7 +228,7 @@ O catálogo está disponível em `/plans` e `/services`. Administradores criam, 
 
 Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Planos referenciados por propostas não podem ser excluídos; serviços presentes na composição de propostas enviadas também são preservados.
 
-`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 97 testes e 576 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
+`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 104 testes e 624 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
 
 ## Cotação e envio de propostas
 
@@ -240,4 +240,14 @@ Corretores consultam propostas enviadas e seus veículos; rascunhos ficam oculto
 
 `ProposalSeeder` cria um rascunho do Cliente 1/Essencial e uma enviada do Cliente 2/Completo. Usa vínculos existentes, preserva propostas encontradas para o mesmo cliente, veículo e plano e não chama APIs. A instalação completa continua usando `php artisan migrate` e `php artisan db:seed`.
 
-As mutações de propostas e dos registros relacionados são serializadas com bloqueio transacional da tabela `proposals`, adquirido antes dos bloqueios de linha. É uma escolha para o volume pequeno da demonstração; não houve teste de carga concorrente. A suite valida isolamento entre clientes, acesso do corretor, confirmação desatualizada/adulterada, histórico, bloqueios de exclusão e rollback do envio. A interface de propostas ainda precisa de conferência visual manual. Aprovação, recusa e contratação pertencem às próximas versões.
+As mutações de propostas e dos registros relacionados são serializadas com bloqueio transacional da tabela `proposals`, adquirido antes dos bloqueios de linha. É uma escolha para o volume pequeno da demonstração; não houve teste de carga concorrente. A suite valida isolamento entre clientes, acesso do corretor, confirmação desatualizada/adulterada, histórico, bloqueios de exclusão e rollback do envio. A interface de propostas ainda precisa de conferência visual manual. Aprovação e recusa estão disponíveis; contratação pertence à próxima versão.
+
+## Análise de propostas
+
+Corretores e administradores acessam `/proposal-reviews`, uma fila paginada das propostas enviadas, ordenada pela data de envio. No detalhe, podem aprovar ou recusar; a recusa exige justificativa. Responsável e data são definidos no servidor. A decisão é revalidada dentro da transação com bloqueio; uma decisão já registrada não pode ser sobrescrita por outra requisição, inclusive com um objeto carregado anteriormente.
+
+O cliente consulta o resultado e a justificativa na própria proposta. Preço, composição histórica e data de envio são preservados durante a análise. Clientes, visitantes e contas inativas não podem analisar propostas. Não há edição posterior da análise nesta versão.
+
+A migration aditiva inclui `reviewed_by` (FK para usuários), `reviewed_at` e `review_notes`. `ProposalReviewSeeder` cria duas propostas fictícias dedicadas, uma aprovada e uma recusada, sem alterar as propostas anteriores. A reexecução preserva esses exemplos, identificados pelas observações demonstrativas. A carga completa de instalação inclui esse seeder.
+
+`ProposalReviewTest` cobre permissões, fila, justificativa, identidade do analista, segunda decisão, rollback e preservação dos dados anteriores pelos seeders. A suíte completa passou com 104 testes e 624 asserções no PostgreSQL local. Build e compilação Blade aprovados; a conferência visual manual das telas de análise ainda está pendente.

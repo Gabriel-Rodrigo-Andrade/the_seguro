@@ -10,8 +10,11 @@ use App\Models\Proposal;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\Vehicle;
-use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\PlanSeeder;
 use Database\Seeders\ProposalSeeder;
+use Database\Seeders\ServiceSeeder;
+use Database\Seeders\UserSeeder;
+use Database\Seeders\VehicleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -221,7 +224,7 @@ class ProposalWorkflowTest extends TestCase
 
     public function test_seed_preserves_existing_proposals(): void
     {
-        $this->seed(DatabaseSeeder::class);
+        $this->seed([UserSeeder::class, VehicleSeeder::class, ServiceSeeder::class, PlanSeeder::class, ProposalSeeder::class]);
         $this->assertDatabaseCount('proposals', 2);
         $submitted = Proposal::where('status', 'submitted')->firstOrFail();
         $this->assertNotEmpty($submitted->services_snapshot);

@@ -14,7 +14,12 @@ class Proposal extends Model
 
     protected function casts(): array
     {
-        return ['quoted_amount' => 'decimal:2', 'status' => ProposalStatus::class, 'services_snapshot' => 'array', 'submitted_at' => 'datetime'];
+        return ['quoted_amount' => 'decimal:2', 'status' => ProposalStatus::class, 'services_snapshot' => 'array', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function customer(): BelongsTo
