@@ -4,7 +4,7 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Autenticação, gestão de usuários, cadastro de veículos e catálogo de planos/serviços implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
+Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotação/envio de propostas implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
 
 - Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
 - Login, logout e edição do próprio perfil, sem exclusão física da conta.
@@ -13,7 +13,7 @@ Autenticação, gestão de usuários, cadastro de veículos e catálogo de plano
 - O último administrador ativo não pode ser desativado ou rebaixado. Alterações administrativas são serializadas em transação PostgreSQL.
 - Clientes gerenciam os próprios veículos; administradores gerenciam veículos de clientes. Há busca por placa, marca e modelo, paginação e cadastro manual.
 - O proprietário não pode ser trocado após o cadastro. Clientes com veículos não podem mudar de papel.
-- Propostas, contratos e assistência serão implementados nas próximas versões.
+- Clientes podem cotar, salvar rascunhos e enviar propostas. Análise, contratos e assistência serão implementados nas próximas versões.
 
 ## Stack e versões verificadas
 
@@ -124,7 +124,7 @@ Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrig
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
 - `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 85 testes, 444 asserções aprovados no PostgreSQL local.
+- `vendor/bin/phpunit`: 97 testes, 576 asserções aprovados no PostgreSQL local.
 - `vendor/bin/pint --test app tests`: formatação verificada.
 - `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
 - `php artisan view:cache`: templates Blade compilados.
@@ -189,7 +189,7 @@ Acesse `/login`, entre com cada perfil demonstrativo e confira o painel e o logo
 
 A tabela `vehicles` foi criada com placa única, marca, modelo, ano de fabricação e proprietário vinculado a `users`. Cor e ano-modelo são opcionais. A chave estrangeira impede excluir uma conta com veículos associados; `user_id` possui índice para consulta por proprietário.
 
-O CRUD está disponível em `/vehicles`. Clientes acessam somente seus veículos; administradores escolhem um cliente ativo no cadastro. O corretor ainda não possui veículos consultáveis, pois o fluxo de propostas está previsto para uma próxima versão. Nenhuma consulta externa foi realizada. As consultas de inspeção estão em `docs/consultas/estrutura-veiculos.sql` no ambiente local.
+O CRUD está disponível em `/vehicles`. Clientes acessam somente seus veículos; administradores escolhem um cliente ativo no cadastro. O corretor consulta veículos que possuem propostas enviadas ou posteriores, sem editar ou excluir. Nenhuma consulta externa foi realizada. As consultas de inspeção estão em `docs/consultas/estrutura-veiculos.sql` no ambiente local.
 
 O `VehicleSeeder` cria dois veículos fictícios, identificados pelas placas `ABC1D23` e `DEF5678`, vinculados respectivamente aos dois clientes demonstrativos. O primeiro possui cor e ano-modelo; o segundo mantém esses campos opcionais vazios. A carga exige que os clientes estejam ativos e preserva registros existentes, sem consultar APIs.
 
@@ -224,8 +224,20 @@ As tabelas `services`, `plans` e `plan_service` armazenam serviços, planos e su
 
 `ServiceSeeder` cria Guincho e Chaveiro. `PlanSeeder` cria Essencial (R$ 600,00 anuais, com Guincho) e Completo (R$ 960,00 anuais, com Guincho e Chaveiro). Todos são fictícios. Os seeders preservam registros existentes e não restauram automaticamente composições alteradas. A carga completa `php artisan db:seed` inclui esse catálogo; não requer API.
 
-O catálogo está disponível em `/plans` e `/services`. Administradores criam, consultam, editam, desativam e excluem registros sem impedimentos de vínculo. Corretores consultam o catálogo. Clientes consultam somente planos ativos com pelo menos um serviço e todos os serviços ativos. A conferência visual das novas telas está pendente. `vendor/bin/phpunit --filter=CatalogDatabaseTest` validou 5 testes e 24 asserções no banco local, incluindo preço positivo, vínculos únicos, FKs e reexecução dos seeders.
+O catálogo está disponível em `/plans` e `/services`. Administradores criam, consultam, editam, desativam e excluem registros sem impedimentos de vínculo. Corretores consultam o catálogo. Clientes consultam somente planos ativos com pelo menos um serviço e todos os serviços ativos. As telas do catálogo foram conferidas manualmente. `vendor/bin/phpunit --filter=CatalogDatabaseTest` validou 5 testes e 24 asserções no banco local, incluindo preço positivo, vínculos únicos, FKs e reexecução dos seeders.
 
-Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Proteções ligadas a propostas serão adicionadas com esse fluxo.
+Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Planos referenciados por propostas não podem ser excluídos; serviços presentes na composição de propostas enviadas também são preservados.
 
-`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 85 testes e 444 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
+`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 97 testes e 576 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
+
+## Cotação e envio de propostas
+
+Em `/proposals`, o cliente cria uma cotação usando seu veículo e um plano disponível. O servidor calcula o preço anual; campos enviados pelo navegador não definem proprietário, situação, preço ou composição. Rascunhos próprios podem ser editados ou excluídos. O detalhe mostra o preço e os serviços atuais antes da confirmação.
+
+Ao enviar, o sistema revalida disponibilidade, propriedade e confirmação da cotação. Se preço ou composição mudarem desde a exibição, solicita nova confirmação com os valores atuais. O envio grava preço, data e uma cópia histórica dos serviços na mesma transação. Propostas enviadas não podem ser editadas ou excluídas; alterações posteriores no catálogo não reescrevem esse histórico.
+
+Corretores consultam propostas enviadas e seus veículos; rascunhos ficam ocultos para eles. Administradores consultam propostas, mas não enviam em nome de clientes. Veículos com qualquer proposta não podem ser excluídos; após envio, seus dados não podem ser alterados. Planos referenciados e serviços presentes em históricos enviados não podem ser excluídos.
+
+`ProposalSeeder` cria um rascunho do Cliente 1/Essencial e uma enviada do Cliente 2/Completo. Usa vínculos existentes, preserva propostas encontradas para o mesmo cliente, veículo e plano e não chama APIs. A instalação completa continua usando `php artisan migrate` e `php artisan db:seed`.
+
+As mutações de propostas e dos registros relacionados são serializadas com bloqueio transacional da tabela `proposals`, adquirido antes dos bloqueios de linha. É uma escolha para o volume pequeno da demonstração; não houve teste de carga concorrente. A suite valida isolamento entre clientes, acesso do corretor, confirmação desatualizada/adulterada, histórico, bloqueios de exclusão e rollback do envio. A interface de propostas ainda precisa de conferência visual manual. Aprovação, recusa e contratação pertencem às próximas versões.

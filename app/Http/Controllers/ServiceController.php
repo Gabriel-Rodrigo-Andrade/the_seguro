@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\SaveServiceRequest;
+use App\Models\Proposal;
 use App\Models\Service;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +51,7 @@ class ServiceController extends Controller
     public function update(SaveServiceRequest $request, Service $service): RedirectResponse
     {
         DB::transaction(function () use ($request, $service) {
+            DB::statement('LOCK TABLE proposals IN SHARE ROW EXCLUSIVE MODE');
             Service::whereKey($service->id)->lockForUpdate()->firstOrFail()->update($request->validated());
         });
 
@@ -60,9 +62,10 @@ class ServiceController extends Controller
     {
         Gate::authorize('delete', $service);
         DB::transaction(function () use ($service) {
+            DB::statement('LOCK TABLE proposals IN SHARE ROW EXCLUSIVE MODE');
             $service = Service::whereKey($service->id)->lockForUpdate()->firstOrFail();
-            if ($service->plans()->exists()) {
-                throw ValidationException::withMessages(['service' => 'Serviço associado a plano não pode ser excluído. Você pode desativá-lo.']);
+            if ($service->plans()->exists() || Proposal::where('status', '!=', 'draft')->whereJsonContains('services_snapshot', [['id' => $service->id]])->exists()) {
+                throw ValidationException::withMessages(['service' => 'Serviço associado a plano ou proposta enviada não pode ser excluído. Você pode desativá-lo.']);
             }
             $service->delete();
         });

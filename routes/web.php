@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
@@ -14,6 +15,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/vehicles/lookup', VehicleLookupController::class)->middleware(['can:create,App\\Models\\Vehicle', 'throttle:vehicle-lookup'])->name('vehicles.lookup');
     Route::resource('vehicles', VehicleController::class);
     Route::resource('plans', PlanController::class);
+    Route::resource('proposals', ProposalController::class);
+    Route::post('/proposals/{proposal}/submit', [ProposalController::class, 'submit'])->name('proposals.submit');
     Route::resource('services', ServiceController::class);
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
