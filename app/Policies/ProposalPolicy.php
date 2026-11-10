@@ -54,6 +54,11 @@ class ProposalPolicy
         return $this->update($user, $proposal);
     }
 
+    public function confirm(User $user, Proposal $proposal): bool
+    {
+        return $this->create($user) && $proposal->user_id === $user->id && in_array($proposal->status, [ProposalStatus::Approved, ProposalStatus::Contracted], true);
+    }
+
     public function submit(User $user, Proposal $proposal): bool
     {
         return $this->update($user, $proposal);

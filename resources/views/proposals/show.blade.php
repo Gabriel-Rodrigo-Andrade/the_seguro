@@ -26,6 +26,11 @@
 <div><x-input-label for="review_notes" value="Justificativa (obrigatória ao recusar)"/><textarea id="review_notes" name="review_notes" maxlength="5000" rows="4" class="w-full rounded-md border-gray-300">{{ old('review_notes') }}</textarea></div>
 <x-primary-button>Registrar decisão</x-primary-button></form></section>
 @endcan
+@can('confirm', $proposal)
+<section class="border rounded-lg p-4 space-y-3"><h3 class="font-semibold">Confirmação da contratação</h3>
+<p>Contratação fictícia acadêmica, sem emissão de apólice real. A vigência começa na data local da confirmação e termina 12 meses depois, com fim exclusivo. O preço e os serviços são os preservados nesta proposta.</p>
+<form method="POST" action="{{ route('proposals.confirm', $proposal) }}">@csrf<x-primary-button>{{ $proposal->status === App\Enums\ProposalStatus::Contracted ? 'Consultar contrato existente' : 'Confirmar contratação fictícia' }}</x-primary-button></form></section>
+@endcan
 @can('update', $proposal)<a class="underline" href="{{ route('proposals.edit', $proposal) }}">Editar rascunho</a>@endcan
 @can('delete', $proposal)<form method="POST" action="{{ route('proposals.destroy', $proposal) }}">@csrf @method('DELETE')<x-danger-button>Excluir rascunho</x-danger-button></form>@endcan
 <a class="underline" href="{{ route('proposals.index') }}">Voltar</a>

@@ -18,6 +18,7 @@
                     <x-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">Veículos</x-nav-link>
 <x-nav-link :href="route('plans.index')" :active="request()->routeIs('plans.*')">Planos</x-nav-link>
 <x-nav-link :href="route('proposals.index')" :active="request()->routeIs('proposals.*')">Propostas</x-nav-link>
+<x-nav-link :href="route('contracts.index')" :active="request()->routeIs('contracts.*')">Contratos</x-nav-link>
 @can('reviewAny', App\Models\Proposal::class)<x-nav-link :href="route('proposal-reviews.index')" :active="request()->routeIs('proposal-reviews.*')">Análises</x-nav-link>@endcan
 @can('viewAny', App\Models\Service::class)<x-nav-link :href="route('services.index')" :active="request()->routeIs('services.*')">Serviços</x-nav-link>@endcan
                     @can('viewAny', App\Models\User::class)
@@ -86,6 +87,7 @@
         <x-responsive-nav-link :href="route('vehicles.index')" :active="request()->routeIs('vehicles.*')">Veículos</x-responsive-nav-link>
 <x-responsive-nav-link :href="route('plans.index')" :active="request()->routeIs('plans.*')">Planos</x-responsive-nav-link>
 <x-responsive-nav-link :href="route('proposals.index')" :active="request()->routeIs('proposals.*')">Propostas</x-responsive-nav-link>
+<x-responsive-nav-link :href="route('contracts.index')" :active="request()->routeIs('contracts.*')">Contratos</x-responsive-nav-link>
 @can('reviewAny', App\Models\Proposal::class)<x-responsive-nav-link :href="route('proposal-reviews.index')" :active="request()->routeIs('proposal-reviews.*')">Análises</x-responsive-nav-link>@endcan
 @can('viewAny', App\Models\Service::class)<x-responsive-nav-link :href="route('services.index')" :active="request()->routeIs('services.*')">Serviços</x-responsive-nav-link>@endcan
         <!-- Responsive Settings Options -->
