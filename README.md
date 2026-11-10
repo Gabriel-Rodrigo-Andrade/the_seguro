@@ -4,7 +4,7 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Autenticação, gestão de usuários e cadastro de veículos implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
+Autenticação, gestão de usuários, cadastro de veículos e catálogo de planos/serviços implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
 
 - Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
 - Login, logout e edição do próprio perfil, sem exclusão física da conta.
@@ -124,7 +124,7 @@ Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrig
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
 - `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 73 testes, 316 asserções aprovados no PostgreSQL local.
+- `vendor/bin/phpunit`: 85 testes, 444 asserções aprovados no PostgreSQL local.
 - `vendor/bin/pint --test app tests`: formatação verificada.
 - `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
 - `php artisan view:cache`: templates Blade compilados.
@@ -202,10 +202,10 @@ A consulta auxilia o cadastro e não grava veículos. As sugestões aparecem par
 Configuração no `.env`:
 
 ```dotenv
-FIPE_API_MODE=mock
+FIPE_LOOKUP_MODE=mock
 FIPE_API_TOKEN=
-FIPE_API_CONNECT_TIMEOUT=3
-FIPE_API_TIMEOUT=8
+FIPE_CONNECT_TIMEOUT=3
+FIPE_TIMEOUT=8
 ```
 
 - `mock`: padrão, sem acesso externo e com identificação de simulação. `XYZ1A23` retorna sugestões completas fictícias; `DEF5678` demonstra uma resposta parcial.
@@ -217,3 +217,15 @@ Após alterar configurações, execute `php artisan config:clear`. A integraçã
 O endpoint local aceita até três consultas por minuto por usuário. Não há repetição automática nem redirecionamento para outro endpoint. Falhas, ausência de dados e cota esgotada mantêm o preenchimento manual disponível. Salvar um veículo e executar seeders não chama a API. A consulta repetida da mesma placa sem alteração na página reutiliza as sugestões recebidas.
 
 Validação realizada com `Http::fake()` e bloqueio de chamadas externas. **Chamada real pendente.** Para conferir a simulação, acesse `/vehicles/create`, informe `XYZ1A23` e clique em **Consultar placa**. Confira as sugestões antes de aplicar e informe os anos manualmente. Teste também `DEF5678` para observar campos ausentes.
+
+## Catálogo demonstrativo
+
+As tabelas `services`, `plans` e `plan_service` armazenam serviços, planos e sua composição. O preço anual usa `numeric(12,2)` com restrição de valor positivo; o vínculo plano/serviço é único, com chaves estrangeiras que impedem excluir registros ainda associados.
+
+`ServiceSeeder` cria Guincho e Chaveiro. `PlanSeeder` cria Essencial (R$ 600,00 anuais, com Guincho) e Completo (R$ 960,00 anuais, com Guincho e Chaveiro). Todos são fictícios. Os seeders preservam registros existentes e não restauram automaticamente composições alteradas. A carga completa `php artisan db:seed` inclui esse catálogo; não requer API.
+
+O catálogo está disponível em `/plans` e `/services`. Administradores criam, consultam, editam, desativam e excluem registros sem impedimentos de vínculo. Corretores consultam o catálogo. Clientes consultam somente planos ativos com pelo menos um serviço e todos os serviços ativos. A conferência visual das novas telas está pendente. `vendor/bin/phpunit --filter=CatalogDatabaseTest` validou 5 testes e 24 asserções no banco local, incluindo preço positivo, vínculos únicos, FKs e reexecução dos seeders.
+
+Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Proteções ligadas a propostas serão adicionadas com esse fluxo.
+
+`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 85 testes e 444 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
