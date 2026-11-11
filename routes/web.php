@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InsuranceContractController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProposalController;
@@ -17,6 +18,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('vehicles', VehicleController::class);
     Route::resource('plans', PlanController::class);
     Route::resource('proposals', ProposalController::class);
+    Route::get('/contracts', [InsuranceContractController::class, 'index'])->name('contracts.index');
+    Route::get('/contracts/{contract}', [InsuranceContractController::class, 'show'])->name('contracts.show');
+    Route::post('/proposals/{proposal}/confirm', [InsuranceContractController::class, 'confirm'])->name('proposals.confirm');
     Route::middleware('role:corretor,administrador')->group(function () {
         Route::get('/proposal-reviews', [ProposalReviewController::class, 'index'])->name('proposal-reviews.index');
         Route::patch('/proposals/{proposal}/review', [ProposalReviewController::class, 'update'])->name('proposals.review');

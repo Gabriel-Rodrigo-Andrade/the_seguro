@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Proposal extends Model
 {
@@ -15,6 +16,11 @@ class Proposal extends Model
     protected function casts(): array
     {
         return ['quoted_amount' => 'decimal:2', 'status' => ProposalStatus::class, 'services_snapshot' => 'array', 'submitted_at' => 'datetime', 'reviewed_at' => 'datetime'];
+    }
+
+    public function contract(): HasOne
+    {
+        return $this->hasOne(InsuranceContract::class);
     }
 
     public function reviewer(): BelongsTo
