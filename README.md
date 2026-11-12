@@ -4,7 +4,7 @@ Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu t
 
 ## Estado atual
 
-Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotação, envio, análise de propostas e confirmação de contratos implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
+Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotação, envio, análise de propostas e confirmação de contratos e assistência implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
 
 - Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
 - Login, logout e edição do próprio perfil, sem exclusão física da conta.
@@ -13,7 +13,7 @@ Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotaç�
 - O último administrador ativo não pode ser desativado ou rebaixado. Alterações administrativas são serializadas em transação PostgreSQL.
 - Clientes gerenciam os próprios veículos; administradores gerenciam veículos de clientes. Há busca por placa, marca e modelo, paginação e cadastro manual.
 - O proprietário não pode ser trocado após o cadastro. Clientes com veículos não podem mudar de papel.
-- Clientes podem cotar, salvar rascunhos e enviar propostas. Corretores e administradores analisam propostas enviadas. Clientes confirmam propostas aprovadas e consultam contratos. Assistência será implementada na próxima versão.
+- Clientes podem cotar, salvar rascunhos e enviar propostas. Corretores e administradores analisam propostas enviadas. Clientes confirmam propostas aprovadas e consultam contratos. Clientes solicitam assistência de serviços contratados; operadores assumem e concluem atendimentos.
 
 ## Stack e versões verificadas
 
@@ -124,7 +124,7 @@ Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrig
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
 - `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 112 testes, 690 asserções aprovados no PostgreSQL local.
+- `vendor/bin/phpunit`: 121 testes, 766 asserções aprovados no PostgreSQL local.
 - `vendor/bin/pint --test app tests`: formatação verificada.
 - `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
 - `php artisan view:cache`: templates Blade compilados.
@@ -228,7 +228,7 @@ O catálogo está disponível em `/plans` e `/services`. Administradores criam, 
 
 Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Planos referenciados por propostas não podem ser excluídos; serviços presentes na composição de propostas enviadas também são preservados.
 
-`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 112 testes e 690 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
+`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 121 testes e 766 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
 
 ## Cotação e envio de propostas
 
@@ -250,7 +250,7 @@ O cliente consulta o resultado e a justificativa na própria proposta. Preço, c
 
 A migration aditiva inclui `reviewed_by` (FK para usuários), `reviewed_at` e `review_notes`. `ProposalReviewSeeder` cria duas propostas fictícias dedicadas, uma aprovada e uma recusada, sem alterar as propostas anteriores. A reexecução preserva esses exemplos, identificados pelas observações demonstrativas. A carga completa de instalação inclui esse seeder.
 
-`ProposalReviewTest` cobre permissões, fila, justificativa, identidade do analista, segunda decisão, rollback e preservação dos dados anteriores pelos seeders. A suíte completa passou com 112 testes e 690 asserções no PostgreSQL local. Build e compilação Blade aprovados; a conferência visual manual das telas de análise ainda está pendente.
+`ProposalReviewTest` cobre permissões, fila, justificativa, identidade do analista, segunda decisão, rollback e preservação dos dados anteriores pelos seeders. A suíte completa passou com 121 testes e 766 asserções no PostgreSQL local. Build e compilação Blade aprovados; a conferência visual manual das telas de análise ainda está pendente.
 
 ## Confirmação e contratos
 
@@ -262,4 +262,16 @@ O início é a data local da confirmação em `America/Sao_Paulo`. O fim exclusi
 
 `InsuranceContractSeeder` cria dois cenários separados das propostas anteriores: contrato com início um mês antes da data da primeira carga (vigente) e outro com início 13 meses antes (encerrado). Ambos têm 12 meses de vigência. Reexecutar preserva as datas e os registros existentes; o exemplo vigente pode expirar com o tempo. As propostas demonstrativas recebem histórico de envio e análise coerente com essas datas.
 
-`InsuranceContractTest` valida propriedade, confirmação repetida, rollback, unicidade, período, ano bissexto, fronteira de meia-noite local e preservação do histórico. Suíte completa: 112 testes e 690 asserções no PostgreSQL local; build/Blade/Pint aprovados. Conferência visual manual dos contratos pendente; sem teste de carga concorrente.
+`InsuranceContractTest` valida propriedade, confirmação repetida, rollback, unicidade, período, ano bissexto, fronteira de meia-noite local e preservação do histórico. Suíte completa: 121 testes e 766 asserções no PostgreSQL local; build/Blade/Pint aprovados. Conferência visual manual dos contratos pendente; sem teste de carga concorrente.
+
+## Assistência veicular
+
+Em `/assistance`, clientes consultam suas solicitações e abrem novas usando um contrato vigente e um serviço presente na composição histórica da contratação. O formulário registra relato e local fictícios, que não podem ser editados depois do envio. Serviços desativados ou renomeados no catálogo continuam disponíveis conforme o snapshot do contrato; a interface usa o nome e a descrição contratados.
+
+Corretores e administradores consultam a fila geral. A sequência é `open → in_progress → completed`: assumir o atendimento registra o operador no servidor; concluir exige resposta e grava a data. Corretor conclui somente atendimentos que assumiu; administrador pode concluir qualquer atendimento em andamento. Não é possível pular estados, reabrir ou sobrescrever a conclusão. Transições usam transação e bloqueio da linha, com autorização revalidada após o bloqueio.
+
+A vigência é conferida na abertura, com fim exclusivo no horário de São Paulo. Um atendimento aberto durante a vigência pode ser concluído após o vencimento. Proprietário, serviço contratado, estado, responsável e data de conclusão são validados ou definidos no servidor. Não há despacho real de assistência.
+
+`ServiceRequestSeeder` cria três cenários fictícios: aberto e em atendimento no contrato vigente do Cliente 1; concluído no contrato encerrado do Cliente 2. As aberturas são datadas dois dias depois do início de cada contrato, e a conclusão demonstrativa ocorre uma hora depois. Reexecutar preserva os registros existentes.
+
+`AssistanceWorkflowTest` cobre histórico de serviços, permissões, fronteira de vigência, conclusão após vencimento, sequência, disputa pelo atendimento, resposta obrigatória e rollback. Suíte completa: 121 testes e 766 asserções no PostgreSQL local; build, Blade e formatação aprovados. Conferência visual manual das novas telas pendente; o painel consolidado será implementado na próxima versão.

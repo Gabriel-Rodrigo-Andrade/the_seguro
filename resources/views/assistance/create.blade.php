@@ -1,0 +1,13 @@
+<x-app-layout>
+<x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Assistência</h2></x-slot>
+<div class="py-8"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="bg-white p-6 shadow sm:rounded-lg space-y-6">
+@if(session('status'))<p role="status" class="text-green-800">{{ session('status') }}</p>@endif
+@if($errors->any())<div role="alert" class="text-red-700"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+<h3 class="font-semibold">Solicitar assistência fictícia</h3><p>Escolha um dos seus contratos vigentes. Os serviços são os preservados na contratação.</p>
+@forelse($contracts as $contract)<section class="border rounded-lg p-4 space-y-3"><h4 class="font-semibold">{{ $contract->contract_number }} — {{ $contract->proposal->vehicle->license_plate }}</h4>
+<form method="POST" action="{{ route('assistance.store') }}" class="max-w-xl space-y-4">@csrf<input type="hidden" name="insurance_contract_id" value="{{ $contract->id }}">
+<div><x-input-label :for="'service_'.$contract->id" value="Serviço contratado"/><select id="service_{{ $contract->id }}" name="service_id" required class="w-full rounded-md border-gray-300"><option value="">Selecione</option>@foreach($contract->proposal->services_snapshot as $service)<option value="{{ $service['id'] }}" @selected((string)old('insurance_contract_id') === (string)$contract->id && (string)old('service_id') === (string)$service['id'])>{{ $service['name'] }}</option>@endforeach</select></div>
+<div><x-input-label :for="'description_'.$contract->id" value="Relato"/><textarea id="description_{{ $contract->id }}" name="description" rows="3" maxlength="10000" required class="w-full rounded-md border-gray-300">{{ (string)old('insurance_contract_id') === (string)$contract->id ? old('description') : '' }}</textarea></div>
+<div><x-input-label :for="'location_'.$contract->id" value="Local fictício do atendimento"/><x-text-input :id="'location_'.$contract->id" name="location" class="w-full" maxlength="255" :value="(string)old('insurance_contract_id') === (string)$contract->id ? old('location') : ''" required/></div><x-primary-button>Registrar solicitação</x-primary-button></form></section>
+@empty<p>Nenhum contrato vigente disponível para abrir assistência.</p>@endforelse<a class="underline" href="{{ route('assistance.index') }}">Voltar</a>
+</div></div></div></x-app-layout>

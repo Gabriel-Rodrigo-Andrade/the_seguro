@@ -17,6 +17,11 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    public function assignedServiceRequests(): HasMany
+    {
+        return $this->hasMany(ServiceRequest::class, 'assigned_to');
+    }
+
     public function reviewedProposals(): HasMany
     {
         return $this->hasMany(Proposal::class, 'reviewed_by');
