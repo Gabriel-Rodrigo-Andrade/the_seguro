@@ -1,10 +1,10 @@
 # TheSeguro
 
-Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu te seguro”. O escopo prevê consulta de veículos, cotações, propostas, contratos e assistência em um único aplicativo Laravel MVC com Blade.
+Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu te seguro”. Reúne veículos, cotações, propostas, contratos, assistência e painel por perfil em um único aplicativo Laravel MVC com Blade.
 
 ## Estado atual
 
-Autenticação, gestão de usuários, cadastro de veículos, catálogo e cotação, envio, análise de propostas e confirmação de contratos e assistência implementados, com testes automatizados aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
+Fluxo implementado de ponta a ponta: autenticação, usuários, veículos, catálogo, cotação, análise, contratação, assistência e painel por perfil. Os testes automatizados estão aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
 
 - Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
 - Login, logout e edição do próprio perfil, sem exclusão física da conta.
@@ -68,7 +68,14 @@ Se o terminal informar `node: command not found`, carregue o NVM com os comandos
 
 ## Instalação do projeto
 
-Após obter este repositório e entrar em sua raiz:
+Repositório: [Gabriel-Rodrigo-Andrade/the_seguro](https://github.com/Gabriel-Rodrigo-Andrade/the_seguro).
+
+```bash
+git clone https://github.com/Gabriel-Rodrigo-Andrade/the_seguro.git
+cd the_seguro
+```
+
+Na raiz do projeto:
 
 ```bash
 nvm use
@@ -97,7 +104,7 @@ A aplicação utiliza PostgreSQL na Neon, configurado no `.env`. Os testes utili
 | Sessões e cache | Arquivos locais |
 | Fila | `sync` |
 
-As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. Ambos os bancos estavam sem tabelas na verificação inicial. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. A tabela `vehicles` mantém veículos vinculados a clientes, com placa única. As demais entidades de negócio ainda serão implementadas. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
+As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. A tabela `vehicles` mantém veículos vinculados a clientes, com placa única. O schema também inclui catálogo, composição dos planos, propostas, contratos e solicitações de assistência. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
 
 O `phpunit.xml` fixa os testes em `127.0.0.1:5432`, banco `theseguro_dev`, usuário `theseguro`, e desativa a URL de conexão alternativa. Esse banco local é exclusivo para testes e poderá ter suas tabelas recriadas pela suíte. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
 
@@ -124,7 +131,7 @@ Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrig
 - `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
 - `php artisan --version`: Laravel 13.40.0.
 - `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 121 testes, 766 asserções aprovados no PostgreSQL local.
+- `vendor/bin/phpunit`: 129 testes, 826 asserções aprovados no PostgreSQL local.
 - `vendor/bin/pint --test app tests`: formatação verificada.
 - `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
 - `php artisan view:cache`: templates Blade compilados.
@@ -145,15 +152,15 @@ O `UserSeeder` cria as seguintes contas fictícias, todas ativas:
 
 Senha demonstrativa das quatro contas: `TheSeguro@123`. Uso exclusivo no ambiente acadêmico de demonstração. As senhas são armazenadas com hash; o seeder preserva contas existentes, identificadas pelo e-mail, sem redefinir senhas ou papéis.
 
-A carga foi executada e os hashes foram verificados. Login e permissões foram validados por testes HTTP automatizados no banco local. A consulta [perfis-demonstracao.sql](docs/consultas/perfis-demonstracao.sql) exibe somente os dados necessários para conferir os perfis.
+A carga foi executada e os hashes foram verificados. Login e permissões foram validados por testes HTTP automatizados no banco local. A consulta `perfis-demonstracao.sql` (consulta do ambiente local) exibe somente os dados necessários para conferir os perfis.
 
 ## Estrutura de usuários
 
 A migration de usuários foi aplicada no banco da aplicação. `users` possui chave primária `bigint`, e-mail único, papel padrão `cliente` e `is_active` padrão `true`. O Laravel mantém o histórico de execução em `migrations`, com chave primária inteira e campos `migration` e `batch`.
 
-As consultas em [estrutura-usuarios.sql](docs/consultas/estrutura-usuarios.sql) permitem inspecionar colunas e restrições no pgAdmin sem consultar dados de contas. As permissões são aplicadas por middleware, Form Requests e UserPolicy no servidor.
+As consultas em `estrutura-usuarios.sql` (consulta do ambiente local) permitem inspecionar colunas e restrições no pgAdmin sem consultar dados de contas. As permissões são aplicadas por middleware, Form Requests e UserPolicy no servidor.
 
-A tabela `password_reset_tokens` possui `email` como chave primária, `token` obrigatório e `created_at` opcional, seguindo o suporte de recuperação de senha do Laravel. A estrutura pode ser consultada com [estrutura-recuperacao-senha.sql](docs/consultas/estrutura-recuperacao-senha.sql), sem exibir tokens. A recuperação de senha foi validada em testes com notificações simuladas; envio real de e-mail não foi configurado.
+A tabela `password_reset_tokens` possui `email` como chave primária, `token` obrigatório e `created_at` opcional, seguindo o suporte de recuperação de senha do Laravel. A estrutura pode ser consultada com `estrutura-recuperacao-senha.sql` (consulta do ambiente local), sem exibir tokens. A recuperação de senha foi validada em testes com notificações simuladas; envio real de e-mail não foi configurado.
 
 ## Preparação de uma instalação nova
 
@@ -228,7 +235,7 @@ O catálogo está disponível em `/plans` e `/services`. Administradores criam, 
 
 Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Planos referenciados por propostas não podem ser excluídos; serviços presentes na composição de propostas enviadas também são preservados.
 
-`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 121 testes e 766 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
+`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 129 testes e 826 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
 
 ## Cotação e envio de propostas
 
@@ -250,7 +257,7 @@ O cliente consulta o resultado e a justificativa na própria proposta. Preço, c
 
 A migration aditiva inclui `reviewed_by` (FK para usuários), `reviewed_at` e `review_notes`. `ProposalReviewSeeder` cria duas propostas fictícias dedicadas, uma aprovada e uma recusada, sem alterar as propostas anteriores. A reexecução preserva esses exemplos, identificados pelas observações demonstrativas. A carga completa de instalação inclui esse seeder.
 
-`ProposalReviewTest` cobre permissões, fila, justificativa, identidade do analista, segunda decisão, rollback e preservação dos dados anteriores pelos seeders. A suíte completa passou com 121 testes e 766 asserções no PostgreSQL local. Build e compilação Blade aprovados; a conferência visual manual das telas de análise ainda está pendente.
+`ProposalReviewTest` cobre permissões, fila, justificativa, identidade do analista, segunda decisão, rollback e preservação dos dados anteriores pelos seeders. A suíte completa passou com 129 testes e 826 asserções no PostgreSQL local. Build e compilação Blade aprovados; a conferência visual manual das telas de análise ainda está pendente.
 
 ## Confirmação e contratos
 
@@ -262,7 +269,7 @@ O início é a data local da confirmação em `America/Sao_Paulo`. O fim exclusi
 
 `InsuranceContractSeeder` cria dois cenários separados das propostas anteriores: contrato com início um mês antes da data da primeira carga (vigente) e outro com início 13 meses antes (encerrado). Ambos têm 12 meses de vigência. Reexecutar preserva as datas e os registros existentes; o exemplo vigente pode expirar com o tempo. As propostas demonstrativas recebem histórico de envio e análise coerente com essas datas.
 
-`InsuranceContractTest` valida propriedade, confirmação repetida, rollback, unicidade, período, ano bissexto, fronteira de meia-noite local e preservação do histórico. Suíte completa: 121 testes e 766 asserções no PostgreSQL local; build/Blade/Pint aprovados. Conferência visual manual dos contratos pendente; sem teste de carga concorrente.
+`InsuranceContractTest` valida propriedade, confirmação repetida, rollback, unicidade, período, ano bissexto, fronteira de meia-noite local e preservação do histórico. Suíte completa: 129 testes e 826 asserções no PostgreSQL local; build/Blade/Pint aprovados. Conferência visual manual dos contratos pendente; sem teste de carga concorrente.
 
 ## Assistência veicular
 
@@ -274,4 +281,50 @@ A vigência é conferida na abertura, com fim exclusivo no horário de São Paul
 
 `ServiceRequestSeeder` cria três cenários fictícios: aberto e em atendimento no contrato vigente do Cliente 1; concluído no contrato encerrado do Cliente 2. As aberturas são datadas dois dias depois do início de cada contrato, e a conclusão demonstrativa ocorre uma hora depois. Reexecutar preserva os registros existentes.
 
-`AssistanceWorkflowTest` cobre histórico de serviços, permissões, fronteira de vigência, conclusão após vencimento, sequência, disputa pelo atendimento, resposta obrigatória e rollback. Suíte completa: 121 testes e 766 asserções no PostgreSQL local; build, Blade e formatação aprovados. Conferência visual manual das novas telas pendente; o painel consolidado será implementado na próxima versão.
+`AssistanceWorkflowTest` cobre histórico de serviços, permissões, fronteira de vigência, conclusão após vencimento, sequência, disputa pelo atendimento, resposta obrigatória e rollback. Suíte completa: 129 testes e 826 asserções no PostgreSQL local; build, Blade e formatação aprovados. Conferência visual manual das novas telas pendente; o painel consolidado está disponível em `/dashboard`.
+
+## Painel por perfil
+
+Em `/dashboard`, clientes acompanham suas propostas, contratos vigentes, vencimentos nos próximos 30 dias e assistências abertas. Corretores veem propostas enviadas e assistências abertas/em atendimento. Administradores acompanham também os totais de usuários, veículos e atendimentos.
+
+Os filtros de situação são independentes por categoria. O período usa datas inclusivas em São Paulo e filtra criação dos registros ou confirmação dos contratos; vigência sempre usa a data local atual. Próximos vencimentos incluem somente contratos vigentes cujo fim exclusivo esteja em até 30 dias. Cards contam todos os resultados e listas exibem até cinco registros. “Ver todos” abre a listagem completa sem transportar os filtros do painel.
+
+As consultas reutilizam os escopos de propriedade e carregam relacionamentos antecipadamente. `DashboardTest` confere isolamento, cliente sem dados, filtros, limites de 30 dias, meia-noite local e quantidade de consultas estável ao aumentar o número de registros. Não há tabela de indicadores persistidos.
+
+## Reconstrução do banco local de testes
+
+Em uma instalação nova no macOS, prepare o PostgreSQL e o banco exclusivo de testes, se ainda não existirem:
+
+```bash
+brew services start postgresql@15
+psql postgres
+```
+
+No console PostgreSQL, com uma conta que possa criar usuários e bancos:
+
+```sql
+CREATE ROLE theseguro LOGIN;
+\password theseguro
+CREATE DATABASE theseguro_dev OWNER theseguro;
+\q
+```
+
+Configure a senha em `.env.testing`, mantendo o arquivo fora do Git. Para reconstruir **somente esse banco local descartável**, apagando suas tabelas e recriando a carga demonstrativa:
+
+```bash
+php scripts/rebuild-testing.php
+```
+
+O script executa `migrate:fresh --seed`, fixa `testing`, PostgreSQL, `127.0.0.1:5432` e `theseguro_dev`, e rejeita configuração em cache ou conexão divergente antes da operação. Ele utiliza as credenciais de `.env.testing`; não altera a Neon. Não use `migrate:fresh` diretamente no banco da aplicação.
+
+Reconstrução validada em 12/11/2026: 10 migrations; 4 usuários, 2 veículos, 2 serviços, 2 planos, 3 vínculos, 6 propostas, 2 contratos e 3 solicitações. As datas demonstrativas são relativas à primeira carga. As verificações de consistência não encontraram órfãos, duplicações de vínculos/contratos, divergências de estado ou históricos incompletos. Testes posteriores podem limpar a carga local; repita o script se precisar inspecioná-la no pgAdmin.
+
+## Validação e limitações da entrega
+
+- 129 testes PHP, 826 asserções e 5 testes JavaScript aprovados; build, Blade, formatação e requisitos Composer verificados.
+- Totais do painel comparados com consultas SQL na Neon e no banco local reconstruído. Dados extras cadastrados manualmente são preservados.
+- Fluxos de autenticação e catálogo conferidos manualmente. A revisão visual final do painel e dos fluxos posteriores ao catálogo ainda está pendente.
+- Consulta de placa permanece em simulação; nenhuma chamada real ao fornecedor foi validada. Recuperação de senha usa notificações simuladas nos testes; envio real de e-mail não foi configurado.
+- Contratos e assistências são fictícios. Não houve teste de carga concorrente, implantação em servidor público ou publicação automática.
+
+Consultas auxiliares e roteiros de evidência ficam no ambiente local em `docs/`, diretório ignorado pelo Git. As migrations, seeders, testes e o script de reconstrução fazem parte do repositório. Autoria e contribuições estão registradas no histórico Git.

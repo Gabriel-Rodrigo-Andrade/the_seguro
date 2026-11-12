@@ -1,15 +1,34 @@
 <x-app-layout>
 <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Painel</h2></x-slot>
-<div class="py-8"><div class="max-w-7xl mx-auto sm:px-6 lg:px-8"><div class="bg-white p-6 shadow sm:rounded-lg space-y-6">
-@if(session("status"))<p role="status" class="text-green-800">{{ session("status") }}</p>@endif
-@if($errors->any())<div role="alert" class="text-red-700"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-<h1 class="text-2xl font-semibold">Olá, {{ auth()->user()->name }}.</h1>
-<p>Seu perfil: <strong>{{ auth()->user()->role->label() }}</strong>.</p>
-<p>Bem-vindo ao TheSeguro. O cadastro de veículos e o catálogo de planos já estão disponíveis. Cotações e envio de propostas estão disponíveis. A análise de propostas está disponível para corretores e administradores. Clientes já podem confirmar propostas aprovadas e consultar contratos. A assistência veicular já está disponível para contratos vigentes.</p>
-@can('viewAny', App\Models\User::class)<a class="underline text-indigo-700" href="{{ route('users.index') }}">Gerenciar usuários</a>@endcan
-<p><a class="underline" href="{{ route('vehicles.index') }}">Consultar veículos</a></p>
-<p><a class="underline" href="{{ route('plans.index') }}">Consultar planos</a></p>
-<p><a class="underline" href="{{ route('proposals.index') }}">Consultar propostas</a></p>
-<p><a class="underline" href="{{ route('profile.edit') }}">Editar meu perfil</a></p>
-</div></div></div>
-</x-app-layout>
+<div class="py-8"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+@if(session('status'))<p role="status" class="rounded-lg bg-green-50 p-4 text-green-800">{{ session('status') }}</p>@endif
+@if($errors->any())<div role="alert" class="rounded-lg bg-red-50 p-4 text-red-700"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+<section class="bg-white p-6 shadow-sm rounded-lg space-y-3"><h1 class="text-2xl font-semibold">Olá, {{ auth()->user()->name }}.</h1><p class="text-gray-600">{{ auth()->user()->role->label() }} · Referência de vigência: {{ $reference->format('d/m/Y') }} (São Paulo)</p>
+@php($isBroker = auth()->user()->role === App\Enums\UserRole::Broker)
+@php($isAdmin = auth()->user()->role === App\Enums\UserRole::Administrator)
+<p>{{ $isBroker ? 'Fila de propostas enviadas e assistências pendentes.' : ($isAdmin ? 'Visão geral da operação.' : 'Acompanhe suas propostas, contratos e solicitações.') }}</p>
+<form method="GET" action="{{ route('dashboard') }}" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+<div><x-input-label for="date_from" value="Desde"/><x-text-input class="w-full" id="date_from" name="date_from" type="date" :value="$filters['date_from'] ?? ''"/></div>
+<div><x-input-label for="date_to" value="Até (inclusive)"/><x-text-input class="w-full" id="date_to" name="date_to" type="date" :value="$filters['date_to'] ?? ''"/></div>
+<div><x-input-label for="proposal_status" value="Situação das propostas"/><select class="w-full rounded-md border-gray-300" id="proposal_status" name="proposal_status"><option value="">{{ $isBroker ? 'Enviadas' : 'Todas' }}</option>@foreach(App\Enums\ProposalStatus::cases() as $status)@if(!$isBroker || $status === App\Enums\ProposalStatus::Submitted)<option value="{{ $status->value }}" @selected(($filters['proposal_status'] ?? '') === $status->value)>{{ $status->label() }}</option>@endif
+@endforeach</select></div>
+<div><x-input-label for="assistance_status" value="Situação das assistências"/><select class="w-full rounded-md border-gray-300" id="assistance_status" name="assistance_status"><option value="">{{ $isBroker ? 'Pendentes' : 'Todas' }}</option>@foreach(App\Enums\ServiceRequestStatus::cases() as $status)@if(!$isBroker || $status !== App\Enums\ServiceRequestStatus::Completed)<option value="{{ $status->value }}" @selected(($filters['assistance_status'] ?? '') === $status->value)>{{ $status->label() }}</option>@endif
+@endforeach</select></div>
+<div class="flex items-center gap-4"><x-primary-button>Filtrar</x-primary-button><a class="underline" href="{{ route('dashboard') }}">Limpar</a></div></form>
+<p class="text-sm text-gray-600">O período filtra a data de criação dos registros e a data de confirmação dos contratos. Cada situação filtra somente sua categoria. Os totais consideram todos os resultados; as listas mostram até cinco. Links “Ver todos” abrem as listagens completas, sem estes filtros.</p></section>
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+@php($cards = $isBroker ? ['proposals' => 'Propostas enviadas', 'open' => 'Assistências abertas', 'in_progress' => 'Em atendimento'] : ['proposals' => 'Propostas', 'contracts' => 'Contratos vigentes', 'expiring' => 'Vencem em até 30 dias', 'open' => 'Assistências abertas'])
+@if($isAdmin)@php($cards = ['users' => 'Usuários', 'vehicles' => 'Veículos'] + $cards + ['assistance' => 'Atendimentos'])@endif
+@foreach($cards as $key => $label)<section class="bg-white p-5 shadow-sm rounded-lg border-t-4 border-indigo-600"><h2 class="text-sm text-gray-600">{{ $label }}</h2><p class="mt-2 text-3xl font-semibold text-gray-900" data-count="{{ $key }}">{{ $counts[$key] }}</p></section>@endforeach
+</div>
+<div class="grid gap-6 lg:grid-cols-2">
+<section class="bg-white p-6 shadow-sm rounded-lg space-y-4"><div class="flex justify-between gap-3"><h2 class="font-semibold text-lg">{{ $isBroker ? 'Propostas para análise' : 'Propostas recentes' }}</h2><a class="underline text-indigo-700" href="{{ $isBroker ? route('proposal-reviews.index') : route('proposals.index') }}">Ver todos</a></div>
+@forelse($proposals as $proposal)<article class="border-t pt-3"><a class="underline font-medium" href="{{ route('proposals.show', $proposal) }}">#{{ $proposal->id }} · {{ $proposal->vehicle->license_plate }}</a><p>{{ $proposal->plan->name }} · {{ $proposal->status->label() }} · R$ {{ number_format((float)$proposal->quoted_amount, 2, ',', '.') }}</p>@if($isAdmin || $isBroker)<p class="text-sm text-gray-600">{{ $proposal->customer->name }}</p>@endif</article>@empty<p class="text-gray-500">Nenhuma proposta neste filtro.</p>@endforelse</section>
+<section class="bg-white p-6 shadow-sm rounded-lg space-y-4"><div class="flex justify-between gap-3"><h2 class="font-semibold text-lg">Assistências</h2><a class="underline text-indigo-700" href="{{ route('assistance.index') }}">Ver todos</a></div>
+@forelse($assistance as $item)<article class="border-t pt-3"><a class="underline font-medium" href="{{ route('assistance.show', $item) }}">#{{ $item->id }} · {{ $item->contract->proposal->vehicle->license_plate }}</a><p>{{ $item->contractedService()['name'] ?? 'Serviço contratado' }} · {{ $item->status->label() }}</p><p class="text-sm text-gray-600">{{ $item->assignee?->name ?? 'Aguardando responsável' }}</p></article>@empty<p class="text-gray-500">Nenhuma assistência neste filtro.</p>@endforelse</section>
+@if(!$isBroker)
+@foreach(['contracts' => 'Contratos vigentes', 'expiring' => 'Próximos vencimentos (30 dias)'] as $list => $heading)<section class="bg-white p-6 shadow-sm rounded-lg space-y-4"><div class="flex justify-between gap-3"><h2 class="font-semibold text-lg">{{ $heading }}</h2><a class="underline text-indigo-700" href="{{ route('contracts.index') }}">Ver todos</a></div>
+@forelse($$list as $contract)<article class="border-t pt-3"><a class="underline font-medium break-all" href="{{ route('contracts.show', $contract) }}">{{ $contract->contract_number }}</a><p>{{ $contract->proposal->vehicle->license_plate }} · Último dia incluído: {{ $contract->ends_on->subDay()->format('d/m/Y') }}</p><p class="text-sm text-gray-600">Fim exclusivo: {{ $contract->ends_on->format('d/m/Y') }}</p></article>@empty<p class="text-gray-500">Nenhum contrato neste filtro.</p>@endforelse</section>@endforeach
+@endif</div>
+<section class="bg-white p-6 shadow-sm rounded-lg flex flex-wrap gap-5"><a class="underline" href="{{ route('vehicles.index') }}">Veículos</a><a class="underline" href="{{ route('plans.index') }}">Planos</a>@can('create', App\Models\Proposal::class)<a class="underline" href="{{ route('proposals.create') }}">Nova cotação</a><a class="underline" href="{{ route('assistance.create') }}">Solicitar assistência</a>@endcan @can('viewAny', App\Models\User::class)<a class="underline" href="{{ route('users.index') }}">Gerenciar usuários</a>@endcan</section>
+</div></div></x-app-layout>
