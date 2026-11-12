@@ -1,0 +1,9 @@
+<x-app-layout>
+<x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">Assistência</h2></x-slot>
+<div class="py-8"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="bg-white p-6 shadow sm:rounded-lg space-y-6">
+@if(session('status'))<p role="status" class="text-green-800">{{ session('status') }}</p>@endif
+@if($errors->any())<div role="alert" class="text-red-700"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+@can('create', App\Models\ServiceRequest::class)<a class="underline" href="{{ route('assistance.create') }}">Solicitar assistência</a>@endcan
+<p>Atendimentos fictícios. Solicitações pendentes aparecem primeiro.</p><div class="overflow-x-auto"><table class="min-w-full text-left"><thead><tr><th class="p-3">Solicitação</th><th class="p-3">Cliente / placa</th><th class="p-3">Serviço contratado</th><th class="p-3">Situação</th><th class="p-3">Responsável</th></tr></thead><tbody>
+@forelse($requests as $assistance)<tr class="border-t"><td class="p-3"><a class="underline" href="{{ route('assistance.show', $assistance) }}">#{{ $assistance->id }}</a></td><td class="p-3">{{ $assistance->contract->proposal->customer->name }} / {{ $assistance->contract->proposal->vehicle->license_plate }}</td><td class="p-3">{{ $assistance->contractedService()['name'] ?? 'Serviço contratado' }}</td><td class="p-3">{{ $assistance->status->label() }}</td><td class="p-3">{{ $assistance->assignee?->name ?? 'Aguardando' }}</td></tr>@empty<tr><td colspan="5" class="p-3">Nenhuma solicitação.</td></tr>@endforelse</tbody></table></div>{{ $requests->links() }}
+</div></div></div></x-app-layout>

@@ -7,6 +7,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InsuranceContract extends Model
 {
@@ -15,6 +16,11 @@ class InsuranceContract extends Model
     protected function casts(): array
     {
         return ['contracted_at' => 'immutable_datetime', 'starts_on' => 'immutable_date', 'ends_on' => 'immutable_date'];
+    }
+
+    public function serviceRequests(): HasMany
+    {
+        return $this->hasMany(ServiceRequest::class);
     }
 
     public function proposal(): BelongsTo
