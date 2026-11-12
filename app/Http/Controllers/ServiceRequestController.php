@@ -26,9 +26,8 @@ class ServiceRequestController extends Controller
     public function create(Request $request): View
     {
         Gate::authorize('create', ServiceRequest::class);
-        $today = now('America/Sao_Paulo')->toDateString();
 
-        return view('assistance.create', ['contracts' => InsuranceContract::visibleTo($request->user())->where('starts_on', '<=', $today)->where('ends_on', '>', $today)->with('proposal.vehicle')->get()]);
+        return view('assistance.create', ['contracts' => InsuranceContract::visibleTo($request->user())->activeAt()->with('proposal.vehicle')->get()]);
     }
 
     public function store(StoreAssistanceRequest $request): RedirectResponse

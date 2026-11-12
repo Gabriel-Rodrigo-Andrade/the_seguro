@@ -35,6 +35,12 @@ class InsuranceContract extends Model
         }
     }
 
+    public function scopeActiveAt(Builder $query, ?CarbonInterface $instant = null): void
+    {
+        $date = ($instant ?? now())->copy()->timezone('America/Sao_Paulo')->toDateString();
+        $query->where('starts_on', '<=', $date)->where('ends_on', '>', $date);
+    }
+
     public function isActiveAt(?CarbonInterface $instant = null): bool
     {
         $date = ($instant ?? now())->copy()->timezone('America/Sao_Paulo')->toDateString();
