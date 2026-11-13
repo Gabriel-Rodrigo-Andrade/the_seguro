@@ -1,19 +1,28 @@
 # TheSeguro
 
-Sistema acadêmico de corretora fictícia: “o seguro” e “se der ruim, eu te seguro”. Reúne veículos, cotações, propostas, contratos, assistência e painel por perfil em um único aplicativo Laravel MVC com Blade.
+Sistema de demonstração de uma corretora fictícia, desenvolvido em Laravel com Blade e PostgreSQL. Reúne cadastro de veículos, consulta de placa, planos, propostas, contratação e assistência veicular, com acesso separado para clientes, corretores e administradores.
 
-## Estado atual
+## Funcionalidades
 
-Fluxo implementado de ponta a ponta: autenticação, usuários, veículos, catálogo, cotação, análise, contratação, assistência e painel por perfil. Os testes automatizados estão aprovados. A consulta por placa está validada com simulações; a chamada real ao fornecedor ainda não foi realizada. A interface de autenticação foi conferida manualmente; a demonstração visual da consulta simulada foi registrada.
+- Autenticação, cadastro público de clientes e edição do próprio perfil.
+- Gestão administrativa de usuários, com ativação e desativação de contas.
+- Cadastro de veículos e consulta de dados por placa pela FipeAPI.
+- Catálogo de planos e serviços, com preço anual e composição de coberturas.
+- Cotação, rascunho e envio de propostas pelo cliente.
+- Aprovação ou recusa de propostas por corretores e administradores.
+- Confirmação da contratação pelo cliente e consulta de contratos.
+- Solicitação, acompanhamento e conclusão de assistências.
+- Painel por perfil, com filtros, contratos vigentes e próximos vencimentos.
 
-- Cadastro público sempre cria cliente ativo, sem escolha de privilégio.
-- Login, logout e edição do próprio perfil, sem exclusão física da conta.
-- Administradores podem cadastrar, listar, consultar, editar, desativar e reativar usuários.
-- Contas inativas não entram e têm sessões existentes invalidadas no próximo acesso.
-- O último administrador ativo não pode ser desativado ou rebaixado. Alterações administrativas são serializadas em transação PostgreSQL.
-- Clientes gerenciam os próprios veículos; administradores gerenciam veículos de clientes. Há busca por placa, marca e modelo, paginação e cadastro manual.
-- O proprietário não pode ser trocado após o cadastro. Clientes com veículos não podem mudar de papel.
-- Clientes podem cotar, salvar rascunhos e enviar propostas. Corretores e administradores analisam propostas enviadas. Clientes confirmam propostas aprovadas e consultam contratos. Clientes solicitam assistência de serviços contratados; operadores assumem e concluem atendimentos.
+## Perfis de acesso
+
+| Perfil | Acesso |
+|---|---|
+| Cliente | Próprios veículos, propostas, contratos e assistências; planos disponíveis |
+| Corretor | Catálogo, propostas enviadas e seus veículos, análise de propostas, contratos e atendimentos |
+| Administrador | Gestão de usuários e catálogo, veículos de clientes, análise de propostas, contratos e atendimentos |
+
+O cadastro público sempre cria um cliente ativo. Contas inativas não podem acessar o sistema. O último administrador ativo não pode ser desativado ou ter seu papel alterado. As permissões e a propriedade dos registros são verificadas no servidor.
 
 ## Stack e versões verificadas
 
@@ -22,7 +31,6 @@ Fluxo implementado de ponta a ponta: autenticação, usuários, veículos, catá
 | PHP | 8.4.24 | Runtime com `pdo_pgsql` e `pgsql` |
 | Composer | 2.10.2 | Dependências PHP |
 | Laravel Framework / Blade / Eloquent | 13.40.0 | MVC, templates e persistência |
-| Laravel skeleton | 13.11.0 | Origem do scaffold |
 | Laravel Breeze | 2.4.2 | Scaffold de autenticação Blade |
 | PostgreSQL | 18.6 (Neon) / 15.18 (local) | Aplicação / testes |
 | Node.js | 22.19.0 | Runtime via NVM, fixado em `.nvmrc` |
@@ -38,9 +46,9 @@ Fluxo implementado de ponta a ponta: autenticação, usuários, veículos, catá
 
 `composer.lock` e `package-lock.json` registram as versões resolvidas. Use PHP 8.4 para reproduzir esta instalação. Blade acompanha a versão do framework. Não há SPA separada.
 
-## Instalação do ambiente
+## Preparação do ambiente
 
-No macOS, se PHP, Composer e PostgreSQL ainda não estiverem instalados:
+No macOS, instale PHP, Composer e PostgreSQL com Homebrew:
 
 ```bash
 brew install php@8.4 composer postgresql@15
@@ -51,97 +59,82 @@ psql --version
 php -m
 ```
 
-Homebrew instala as revisões disponíveis das fórmulas, não necessariamente os mesmos patches da tabela.
+As fórmulas do Homebrew instalam os patches disponíveis, que podem diferir da tabela. Confirme que o PHP possui suporte a PostgreSQL (`pdo_pgsql`).
 
-Com NVM já instalado, na raiz do projeto:
+Com [NVM](https://github.com/nvm-sh/nvm) instalado, carregue-o no terminal:
 
 ```bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-nvm install
-nvm use
-node -v
-npm -v
 ```
 
-Se o terminal informar `node: command not found`, carregue o NVM com os comandos acima. Referências oficiais: [Node.js](https://nodejs.org/en/download), [NVM](https://github.com/nvm-sh/nvm), [Laravel](https://laravel.com/docs/13.x/installation) e [Breeze](https://github.com/laravel/breeze).
-
-## Instalação do projeto
-
-Repositório: [Gabriel-Rodrigo-Andrade/the_seguro](https://github.com/Gabriel-Rodrigo-Andrade/the_seguro).
+## Instalação
 
 ```bash
 git clone https://github.com/Gabriel-Rodrigo-Andrade/the_seguro.git
 cd the_seguro
-```
-
-Na raiz do projeto:
-
-```bash
+nvm install
 nvm use
 composer install --no-scripts
-# Copiar apenas se ainda não houver configuração local.
 test -f .env || cp .env.example .env
 php artisan package:discover
-# Em uma instalação nova, gerar a chave uma única vez.
 php artisan key:generate
 npm ci
 npm run build
 composer check-platform-reqs
 ```
 
-Não regenerar a chave de uma instalação em uso. Não executar `breeze:install` novamente em um clone: o scaffold já faz parte do projeto e o comando sobrescreve arquivos. `npm ci` reproduz o lockfile; `.npmrc` mantém scripts de instalação desativados. O build explícito foi validado nessa configuração.
+Gere `APP_KEY` somente na instalação inicial; não substitua a chave de uma aplicação em uso. O scaffold de autenticação já está no repositório, portanto não é necessário executar `breeze:install`. O arquivo `.npmrc` desativa scripts de instalação; o build é executado explicitamente.
 
-## Banco de dados
+### Banco da aplicação
 
-A aplicação utiliza PostgreSQL na Neon, configurado no `.env`. Os testes utilizam PostgreSQL local, com credenciais próprias no `.env.testing`. O `.env.example` contém valores locais de referência e senha vazia.
+Crie o banco no projeto e na branch desejados na Neon. Configure o `.env` com os dados fornecidos pelo painel:
 
-| Configuração | Valor |
-|---|---|
-| Conexão | `pgsql` |
-| Banco da aplicação (Neon) | `neondb` |
-| Banco de testes (local) | `theseguro_dev` |
-| Sessões e cache | Arquivos locais |
-| Fila | `sync` |
+```dotenv
+DB_CONNECTION=pgsql
+DB_HOST=seu-host.neon.tech
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=seu_usuario
+DB_PASSWORD=sua_senha
+DB_SSLMODE=require
+```
 
-As conexões foram verificadas em PostgreSQL 18.6 na Neon e 15.18 no ambiente local. A conexão Neon utiliza `DB_SSLMODE=require`, com TLS 1.3 confirmado pelo cliente PostgreSQL. As versões principais diferem; os testes locais não comprovam equivalência completa com o ambiente remoto. A tabela de usuários contém papel (`cliente`, `corretor` ou `administrador`) e estado ativo, com e-mail único e restrição dos papéis no PostgreSQL. A estrutura de recuperação de senha foi criada por uma migration separada. Os comandos de instalação preparam a aplicação e os assets, mas não criam bancos nem executam migrations. A tabela `vehicles` mantém veículos vinculados a clientes, com placa única. O schema também inclui catálogo, composição dos planos, propostas, contratos e solicitações de assistência. Sessões e cache usam arquivos; não são criadas tabelas de filas ou cache.
+Substitua os valores de exemplo pelas credenciais da conexão. O `.env.example` aponta inicialmente para o banco local usado nos testes: altere a conexão da aplicação antes de executar migrations. O banco `theseguro_dev` local deve ficar reservado à suíte de testes.
 
-O `phpunit.xml` fixa os testes em `127.0.0.1:5432`, banco `theseguro_dev`, usuário `theseguro`, e desativa a URL de conexão alternativa. Esse banco local é exclusivo para testes e poderá ter suas tabelas recriadas pela suíte. Mantenha as credenciais apenas nos arquivos locais de ambiente, fora do controle de versão.
+A aplicação usa sessões e cache em arquivos, com fila `sync`; Redis e workers de fila não são necessários nesta configuração. Credenciais e chaves ficam nos arquivos de ambiente, fora do Git.
 
-## Execução local
+Depois de configurar o banco:
 
-Após configurar o banco e instalar os assets:
+```bash
+php artisan config:clear
+php artisan migrate
+```
+
+Para carregar os dados fictícios de demonstração:
+
+```bash
+php artisan db:seed
+```
+
+A carga inclui quatro usuários, dois veículos, dois serviços, dois planos, propostas em diferentes situações, dois contratos e três solicitações de assistência. Os seeders preservam os registros demonstrativos existentes. As datas dos contratos são relativas à primeira carga; o exemplo vigente pode expirar com o tempo.
+
+### Execução local
 
 ```bash
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-Em outro terminal, se estiver desenvolvendo assets:
+Acesse `http://127.0.0.1:8000`. Para desenvolver os assets, abra outro terminal:
 
 ```bash
 nvm use
 npm run dev
 ```
 
-Acesse `http://127.0.0.1:8000`. Com `npm run build` já executado, não é obrigatório manter Vite em execução para servir os assets compilados. A aplicação usa a conexão definida no `.env`. A interface está em português e utiliza os componentes Blade do Breeze.
-
-## Verificações realizadas
-
-- `composer validate --strict`: manifesto válido.
-- `composer check-platform-reqs`: requisitos satisfeitos no PHP 8.4.24.
-- `php artisan --version`: Laravel 13.40.0.
-- `php artisan route:list --except-vendor`: rotas de autenticação, usuários e veículos; nenhuma rota de exclusão física de usuários.
-- `vendor/bin/phpunit`: 129 testes, 826 asserções aprovados no PostgreSQL local.
-- `vendor/bin/pint --test app tests`: formatação verificada.
-- `node --test tests/Frontend/vehicle-lookup.test.mjs`: 5 testes aprovados.
-- `php artisan view:cache`: templates Blade compilados.
-- `npm run build`: assets gerados com sucesso.
-
-A suíte cobre autenticação dos três perfis, recuperação e alteração de senha com notificações simuladas, bloqueio de visitante e conta inativa, privilégios no cadastro/perfil, acesso administrativo, preservação do último administrador ativo, desativação sem exclusão e reexecução dos seeders. A concorrência é protegida por bloqueio transacional; não foi realizado teste de carga concorrente. Os testes também cobrem CRUD e propriedade dos veículos, consulta sem persistência, respostas completas/parciais, erros, timeout, limite de requisições e cadastro manual após falha. Os testes JavaScript verificam aplicação explícita das sugestões, preservação dos campos, descarte de respostas atrasadas e ausência de repetição automática. A demonstração visual da consulta simulada foi registrada; não foi realizada inspeção automatizada do layout. O refinamento estético permanece planejado.
+Com os assets compilados por `npm run build`, não é necessário manter o servidor Vite em execução.
 
 ## Contas de demonstração
-
-O `UserSeeder` cria as seguintes contas fictícias, todas ativas:
 
 | Perfil | E-mail |
 |---|---|
@@ -150,157 +143,101 @@ O `UserSeeder` cria as seguintes contas fictícias, todas ativas:
 | Corretor | `corretor@theseguro.test` |
 | Administrador | `admin@theseguro.test` |
 
-Senha demonstrativa das quatro contas: `TheSeguro@123`. Uso exclusivo no ambiente acadêmico de demonstração. As senhas são armazenadas com hash; o seeder preserva contas existentes, identificadas pelo e-mail, sem redefinir senhas ou papéis.
+Senha das contas demonstrativas: `TheSeguro@123`.
 
-A carga foi executada e os hashes foram verificados. Login e permissões foram validados por testes HTTP automatizados no banco local. A consulta `perfis-demonstracao.sql` (consulta do ambiente local) exibe somente os dados necessários para conferir os perfis.
-
-## Estrutura de usuários
-
-A migration de usuários foi aplicada no banco da aplicação. `users` possui chave primária `bigint`, e-mail único, papel padrão `cliente` e `is_active` padrão `true`. O Laravel mantém o histórico de execução em `migrations`, com chave primária inteira e campos `migration` e `batch`.
-
-As consultas em `estrutura-usuarios.sql` (consulta do ambiente local) permitem inspecionar colunas e restrições no pgAdmin sem consultar dados de contas. As permissões são aplicadas por middleware, Form Requests e UserPolicy no servidor.
-
-A tabela `password_reset_tokens` possui `email` como chave primária, `token` obrigatório e `created_at` opcional, seguindo o suporte de recuperação de senha do Laravel. A estrutura pode ser consultada com `estrutura-recuperacao-senha.sql` (consulta do ambiente local), sem exibir tokens. A recuperação de senha foi validada em testes com notificações simuladas; envio real de e-mail não foi configurado.
-
-## Preparação de uma instalação nova
-
-Em um banco novo, exclusivo da aplicação, depois de conferir as credenciais no `.env`, aplique as migrations e opcionalmente carregue as contas e os veículos demonstrativos:
-
-```bash
-php artisan migrate
-php artisan db:seed
-```
-
-Esses comandos não são necessários nos bancos que já receberam as migrations e a carga. As contas demonstrativas têm senha pública e são destinadas somente à demonstração acadêmica.
-
-## Testes locais
-
-Configure um PostgreSQL local exclusivo para testes. O banco usado nesta configuração é `theseguro_dev`, com usuário `theseguro`. Em uma nova instalação, prepare o arquivo de ambiente:
-
-```bash
-test -f .env.testing || cp .env.testing.example .env.testing
-# Preencha DB_PASSWORD no arquivo local, sem incluí-lo no Git.
-php artisan key:generate --env=testing
-vendor/bin/phpunit
-nvm use
-node --test tests/Frontend/vehicle-lookup.test.mjs
-```
-
-Gere a chave apenas ao preparar um arquivo novo. A suíte pode recriar as tabelas desse banco local. Uma verificação anterior à inicialização dos testes recusa conexão remota, outro banco e configuração em cache; chamadas HTTP externas também são bloqueadas nos testes. A Neon não é utilizada pela suíte.
-
-## Conferência da interface
-
-Acesse `/login`, entre com cada perfil demonstrativo e confira o painel e o logout. Com administrador, confira `/admin/users`, cadastro, detalhes, edição e mensagens de validação. Confira `/profile` e a navegação em tela estreita. Clientes e corretores não devem acessar `/admin/users`.
-
-## Estrutura de veículos
-
-A tabela `vehicles` foi criada com placa única, marca, modelo, ano de fabricação e proprietário vinculado a `users`. Cor e ano-modelo são opcionais. A chave estrangeira impede excluir uma conta com veículos associados; `user_id` possui índice para consulta por proprietário.
-
-O CRUD está disponível em `/vehicles`. Clientes acessam somente seus veículos; administradores escolhem um cliente ativo no cadastro. O corretor consulta veículos que possuem propostas enviadas ou posteriores, sem editar ou excluir. Nenhuma consulta externa foi realizada. As consultas de inspeção estão em `docs/consultas/estrutura-veiculos.sql` no ambiente local.
-
-O `VehicleSeeder` cria dois veículos fictícios, identificados pelas placas `ABC1D23` e `DEF5678`, vinculados respectivamente aos dois clientes demonstrativos. O primeiro possui cor e ano-modelo; o segundo mantém esses campos opcionais vazios. A carga exige que os clientes estejam ativos e preserva registros existentes, sem consultar APIs.
-
-Os testes em `VehicleDatabaseTest` verificam placa única, FK de proprietário, restrição de exclusão, preservação na reexecução e rollback quando falta um proprietário. Resultado: 5 testes e 17 asserções aprovados no PostgreSQL local. O banco demonstrativo recebeu somente dados válidos. A consulta local `docs/consultas/veiculos-proprietarios.sql` mostra a relação entre veículos e proprietários.
+Essas contas são exclusivas para demonstração. As senhas são armazenadas com hash. Executar o seeder novamente não redefine senhas nem papéis de contas existentes.
 
 ## Consulta de placa
 
-A consulta auxilia o cadastro e não grava veículos. As sugestões aparecem para revisão; o botão **Aplicar sugestões revisadas** preenche marca, modelo e cor. Fabricação e ano-modelo devem ser confirmados manualmente: o campo `year` do fornecedor não distingue esses dois conceitos. Campos ausentes não apagam valores preenchidos, e a substituição de valores exige confirmação.
+A integração usa a [FipeAPI](https://fipe.api.br/docs/api/busca-por-placa-alpha) para sugerir marca, modelo, cor e ano do veículo. A consulta não cadastra nem altera veículos automaticamente.
 
-Configuração no `.env`:
+Para usar o fornecedor real, configure no `.env`:
 
 ```dotenv
-FIPE_LOOKUP_MODE=mock
-FIPE_API_TOKEN=
+FIPE_LOOKUP_MODE=live
+FIPE_API_TOKEN=seu_token
 FIPE_CONNECT_TIMEOUT=3
 FIPE_TIMEOUT=8
 ```
 
-- `mock`: padrão, sem acesso externo e com identificação de simulação. `XYZ1A23` retorna sugestões completas fictícias; `DEF5678` demonstra uma resposta parcial.
-- `disabled`: consulta indisponível; cadastro manual continua funcionando.
-- `live`: requer token do fornecedor em `FIPE_API_TOKEN`, usado somente no servidor. Sem token, nenhuma consulta externa é feita. Nunca use prefixo `VITE_` para esse segredo.
+Substitua `seu_token` pelo token da sua conta e execute:
 
-Após alterar configurações, execute `php artisan config:clear`. A integração utiliza `GET /api/v2/plates/{plate}` e o header `X-Subscription-Token`. A [documentação da busca por placa](https://fipe.api.br/docs/api/busca-por-placa-alpha), consultada em novembro de 2026, informa 10 consultas bem-sucedidas por mês no plano gratuito com token; confirme as condições atuais antes do uso real. A aplicação exige token no modo live e não utiliza acesso anônimo.
+```bash
+php artisan config:clear
+```
 
-O endpoint local aceita até três consultas por minuto por usuário. Não há repetição automática nem redirecionamento para outro endpoint. Falhas, ausência de dados e cota esgotada mantêm o preenchimento manual disponível. Salvar um veículo e executar seeders não chama a API. A consulta repetida da mesma placa sem alteração na página reutiliza as sugestões recebidas.
+| Modo | Comportamento |
+|---|---|
+| `live` | Consulta real com token configurado no servidor |
+| `mock` | Dados fictícios identificados como simulação, sem acesso externo |
+| `disabled` | Consulta desativada; cadastro manual disponível |
 
-Validação realizada com `Http::fake()` e bloqueio de chamadas externas. **Chamada real pendente.** Para conferir a simulação, acesse `/vehicles/create`, informe `XYZ1A23` e clique em **Consultar placa**. Confira as sugestões antes de aplicar e informe os anos manualmente. Teste também `DEF5678` para observar campos ausentes.
+O modo padrão do projeto é `mock`. Nesse modo, `XYZ1A23` retorna sugestões fictícias completas e `DEF5678` retorna uma resposta parcial. O token nunca deve ser colocado em variáveis `VITE_*` ou no código frontend.
 
-## Catálogo demonstrativo
+No cadastro em `/vehicles/create`, informe a placa e clique em **Consultar placa**. Revise o retorno e use **Aplicar sugestões revisadas** para preencher marca, modelo e cor. Confirme manualmente fabricação e ano-modelo: o campo `year` do fornecedor não distingue esses conceitos. Campos ausentes não apagam valores já preenchidos; substituir dados exige confirmação.
 
-As tabelas `services`, `plans` e `plan_service` armazenam serviços, planos e sua composição. O preço anual usa `numeric(12,2)` com restrição de valor positivo; o vínculo plano/serviço é único, com chaves estrangeiras que impedem excluir registros ainda associados.
+A requisição usa `GET https://fipe.parallelum.com.br/api/v2/plates/{plate}` com o cabeçalho `X-Subscription-Token`. Conforme a documentação consultada em 13/11/2026, o plano gratuito com token permite 10 consultas bem-sucedidas por mês. O endpoint está em fase Alpha; disponibilidade, cobertura e condições podem mudar.
 
-`ServiceSeeder` cria Guincho e Chaveiro. `PlanSeeder` cria Essencial (R$ 600,00 anuais, com Guincho) e Completo (R$ 960,00 anuais, com Guincho e Chaveiro). Todos são fictícios. Os seeders preservam registros existentes e não restauram automaticamente composições alteradas. A carga completa `php artisan db:seed` inclui esse catálogo; não requer API.
+A aplicação limita a três consultas por minuto por usuário, sem repetição automática. Esse limite não substitui a cota mensal compartilhada do fornecedor. A resposta pode informar a cota restante; quando os cabeçalhos não estão disponíveis, ela fica desconhecida. Falhas mantêm o cadastro manual disponível. Salvar veículos e executar seeders não consulta a API.
 
-O catálogo está disponível em `/plans` e `/services`. Administradores criam, consultam, editam, desativam e excluem registros sem impedimentos de vínculo. Corretores consultam o catálogo. Clientes consultam somente planos ativos com pelo menos um serviço e todos os serviços ativos. As telas do catálogo foram conferidas manualmente. `vendor/bin/phpunit --filter=CatalogDatabaseTest` validou 5 testes e 24 asserções no banco local, incluindo preço positivo, vínculos únicos, FKs e reexecução dos seeders.
+A consulta real pelo serviço Laravel foi validada em 13/11/2026, com HTTP 200 e retorno normalizado em aproximadamente 463 ms. Os testes automatizados usam respostas simuladas e não consomem a cota externa.
 
-Planos exigem nome único, descrição, preço anual positivo com até duas casas decimais e ao menos um serviço ativo, sem repetições. O salvamento do plano e da composição é transacional. Desativar um serviço torna indisponíveis os planos que o incluem; os vínculos são preservados. Serviços associados não podem ser excluídos. Excluir um plano remove seus vínculos na mesma transação e preserva os serviços. Planos referenciados por propostas não podem ser excluídos; serviços presentes na composição de propostas enviadas também são preservados.
+## Fluxo de utilização
 
-`CatalogManagementTest` cobre permissões, disponibilidade para clientes, CRUD administrativo, composição, validação de preço, exclusão com vínculos e rollback em falha de persistência. A suíte completa passou com 129 testes e 826 asserções no PostgreSQL local; não foi realizado teste de carga concorrente.
+### Veículos e catálogo
 
-## Cotação e envio de propostas
+Clientes gerenciam somente seus veículos. Administradores escolhem um cliente ativo no cadastro; o proprietário não pode ser trocado depois. Placas são únicas. Cor e ano-modelo são opcionais; fabricação é obrigatória.
 
-Em `/proposals`, o cliente cria uma cotação usando seu veículo e um plano disponível. O servidor calcula o preço anual; campos enviados pelo navegador não definem proprietário, situação, preço ou composição. Rascunhos próprios podem ser editados ou excluídos. O detalhe mostra o preço e os serviços atuais antes da confirmação.
+Administradores gerenciam `/plans` e `/services`. Clientes consultam planos ativos que tenham ao menos um serviço e todos os serviços ativos. Corretores consultam o catálogo. A carga inicial oferece Essencial, por R$ 600,00 anuais com Guincho, e Completo, por R$ 960,00 anuais com Guincho e Chaveiro.
 
-Ao enviar, o sistema revalida disponibilidade, propriedade e confirmação da cotação. Se preço ou composição mudarem desde a exibição, solicita nova confirmação com os valores atuais. O envio grava preço, data e uma cópia histórica dos serviços na mesma transação. Propostas enviadas não podem ser editadas ou excluídas; alterações posteriores no catálogo não reescrevem esse histórico.
+Desativar um serviço torna indisponíveis os planos que o incluem. Planos referenciados por propostas e serviços vinculados a planos ou presentes no histórico de propostas enviadas não podem ser excluídos.
 
-Corretores consultam propostas enviadas e seus veículos; rascunhos ficam ocultos para eles. Administradores consultam propostas, mas não enviam em nome de clientes. Veículos com qualquer proposta não podem ser excluídos; após envio, seus dados não podem ser alterados. Planos referenciados e serviços presentes em históricos enviados não podem ser excluídos.
+### Propostas e análise
 
-`ProposalSeeder` cria um rascunho do Cliente 1/Essencial e uma enviada do Cliente 2/Completo. Usa vínculos existentes, preserva propostas encontradas para o mesmo cliente, veículo e plano e não chama APIs. A instalação completa continua usando `php artisan migrate` e `php artisan db:seed`.
+Em `/proposals`, o cliente escolhe um veículo próprio e um plano disponível. O servidor define o preço anual. Rascunhos podem ser editados ou excluídos pelo proprietário.
 
-As mutações de propostas e dos registros relacionados são serializadas com bloqueio transacional da tabela `proposals`, adquirido antes dos bloqueios de linha. É uma escolha para o volume pequeno da demonstração; não houve teste de carga concorrente. A suite valida isolamento entre clientes, acesso do corretor, confirmação desatualizada/adulterada, histórico, bloqueios de exclusão e rollback do envio. A interface de propostas ainda precisa de conferência visual manual. Aprovação, recusa e confirmação da contratação estão disponíveis.
+Ao enviar, o sistema revalida o preço e a composição apresentados. Se houver alteração, solicita nova confirmação. O envio grava preço, data e uma cópia dos serviços contratados; mudanças posteriores no catálogo não alteram esse histórico. Propostas enviadas não podem ser editadas ou excluídas.
 
-## Análise de propostas
+Veículos com propostas não podem ser excluídos. Depois do envio de uma proposta, seus dados também não podem ser alterados. Rascunhos não ficam disponíveis para corretores.
 
-Corretores e administradores acessam `/proposal-reviews`, uma fila paginada das propostas enviadas, ordenada pela data de envio. No detalhe, podem aprovar ou recusar; a recusa exige justificativa. Responsável e data são definidos no servidor. A decisão é revalidada dentro da transação com bloqueio; uma decisão já registrada não pode ser sobrescrita por outra requisição, inclusive com um objeto carregado anteriormente.
+Corretores e administradores acessam `/proposal-reviews` para analisar propostas enviadas. A recusa exige justificativa. Analista e data são definidos no servidor, e uma decisão registrada não pode ser sobrescrita. O cliente acompanha o resultado na própria proposta.
 
-O cliente consulta o resultado e a justificativa na própria proposta. Preço, composição histórica e data de envio são preservados durante a análise. Clientes, visitantes e contas inativas não podem analisar propostas. Não há edição posterior da análise nesta versão.
+### Contratos
 
-A migration aditiva inclui `reviewed_by` (FK para usuários), `reviewed_at` e `review_notes`. `ProposalReviewSeeder` cria duas propostas fictícias dedicadas, uma aprovada e uma recusada, sem alterar as propostas anteriores. A reexecução preserva esses exemplos, identificados pelas observações demonstrativas. A carga completa de instalação inclui esse seeder.
+Somente o cliente proprietário confirma uma proposta aprovada. A operação cria o contrato e muda a proposta para `contracted` na mesma transação. Repetir a confirmação retorna o contrato existente.
 
-`ProposalReviewTest` cobre permissões, fila, justificativa, identidade do analista, segunda decisão, rollback e preservação dos dados anteriores pelos seeders. A suíte completa passou com 129 testes e 826 asserções no PostgreSQL local. Build e compilação Blade aprovados; a conferência visual manual das telas de análise ainda está pendente.
+Em `/contracts`, clientes consultam os próprios contratos; corretores e administradores consultam a lista geral. Não há edição ou exclusão. Preço e serviços são obtidos do histórico da proposta.
 
-## Confirmação e contratos
+A vigência começa na data da confirmação em `America/Sao_Paulo` e termina 12 meses depois, com fim exclusivo e sem transbordamento de mês. Por exemplo, um contrato iniciado em 29/02/2024 termina em 28/02/2025 às 00:00. A interface mostra também o último dia incluído.
 
-O cliente proprietário confirma a contratação na proposta aprovada. A operação gera um número interno `TS-` e cria o contrato junto com a mudança da proposta para `contracted`, em uma transação. Repetir a confirmação retorna o mesmo contrato. Outro cliente, corretor ou administrador não confirma em nome do proprietário. Propostas recusadas, enviadas ou em rascunho não podem ser contratadas.
+### Assistência
 
-Em `/contracts`, clientes consultam seus contratos; corretores e administradores consultam a lista geral. Não há edição ou exclusão de contratos. O detalhe usa o preço e os serviços históricos da proposta, sem recalcular pelo catálogo atual. Trata-se de contratação fictícia acadêmica, sem emissão de apólice real.
+Em `/assistance`, o cliente abre uma solicitação para um contrato próprio vigente e um serviço incluído no histórico da contratação. Relato e local não podem ser alterados após o envio. Alterações posteriores no catálogo não removem os serviços contratados.
 
-O início é a data local da confirmação em `America/Sao_Paulo`. O fim exclusivo é 12 meses depois, sem transbordamento de mês: 29/02/2024 termina em 28/02/2025 às 00:00. A tela também informa o último dia incluído. `contracted_at` registra o instante da confirmação; `starts_on` e `ends_on` são datas. O banco garante proposta única por contrato, número único, FK e fim posterior ao início.
+O atendimento segue `open → in_progress → completed`. Corretores e administradores assumem solicitações; a conclusão exige uma resposta. O corretor conclui somente atendimentos que assumiu, enquanto o administrador pode concluir qualquer atendimento em andamento. Não é possível pular estados ou reabrir uma solicitação concluída.
 
-`InsuranceContractSeeder` cria dois cenários separados das propostas anteriores: contrato com início um mês antes da data da primeira carga (vigente) e outro com início 13 meses antes (encerrado). Ambos têm 12 meses de vigência. Reexecutar preserva as datas e os registros existentes; o exemplo vigente pode expirar com o tempo. As propostas demonstrativas recebem histórico de envio e análise coerente com essas datas.
+A vigência é exigida na abertura. Um atendimento aberto durante a vigência pode ser concluído após o vencimento do contrato.
 
-`InsuranceContractTest` valida propriedade, confirmação repetida, rollback, unicidade, período, ano bissexto, fronteira de meia-noite local e preservação do histórico. Suíte completa: 129 testes e 826 asserções no PostgreSQL local; build/Blade/Pint aprovados. Conferência visual manual dos contratos pendente; sem teste de carga concorrente.
+### Painel
 
-## Assistência veicular
+O `/dashboard` reúne informações conforme o perfil. Clientes acompanham seus registros, corretores veem propostas enviadas e assistências abertas ou em andamento, e administradores também acompanham usuários e veículos.
 
-Em `/assistance`, clientes consultam suas solicitações e abrem novas usando um contrato vigente e um serviço presente na composição histórica da contratação. O formulário registra relato e local fictícios, que não podem ser editados depois do envio. Serviços desativados ou renomeados no catálogo continuam disponíveis conforme o snapshot do contrato; a interface usa o nome e a descrição contratados.
+Os filtros de situação são independentes por categoria. O período considera datas inclusivas em São Paulo, usando a criação dos registros ou a confirmação dos contratos. Vigência e vencimentos usam a data atual; próximos vencimentos incluem contratos vigentes com fim em até 30 dias.
 
-Corretores e administradores consultam a fila geral. A sequência é `open → in_progress → completed`: assumir o atendimento registra o operador no servidor; concluir exige resposta e grava a data. Corretor conclui somente atendimentos que assumiu; administrador pode concluir qualquer atendimento em andamento. Não é possível pular estados, reabrir ou sobrescrever a conclusão. Transições usam transação e bloqueio da linha, com autorização revalidada após o bloqueio.
+Os indicadores contam todos os resultados; cada lista exibe até cinco registros. **Ver todos** abre a listagem completa sem transportar os filtros do painel.
 
-A vigência é conferida na abertura, com fim exclusivo no horário de São Paulo. Um atendimento aberto durante a vigência pode ser concluído após o vencimento. Proprietário, serviço contratado, estado, responsável e data de conclusão são validados ou definidos no servidor. Não há despacho real de assistência.
+## Testes
 
-`ServiceRequestSeeder` cria três cenários fictícios: aberto e em atendimento no contrato vigente do Cliente 1; concluído no contrato encerrado do Cliente 2. As aberturas são datadas dois dias depois do início de cada contrato, e a conclusão demonstrativa ocorre uma hora depois. Reexecutar preserva os registros existentes.
+Os testes usam exclusivamente PostgreSQL local em `127.0.0.1:5432`, banco `theseguro_dev`, usuário `theseguro`. Não use esse banco para dados que precisem ser preservados.
 
-`AssistanceWorkflowTest` cobre histórico de serviços, permissões, fronteira de vigência, conclusão após vencimento, sequência, disputa pelo atendimento, resposta obrigatória e rollback. Suíte completa: 129 testes e 826 asserções no PostgreSQL local; build, Blade e formatação aprovados. Conferência visual manual das novas telas pendente; o painel consolidado está disponível em `/dashboard`.
-
-## Painel por perfil
-
-Em `/dashboard`, clientes acompanham suas propostas, contratos vigentes, vencimentos nos próximos 30 dias e assistências abertas. Corretores veem propostas enviadas e assistências abertas/em atendimento. Administradores acompanham também os totais de usuários, veículos e atendimentos.
-
-Os filtros de situação são independentes por categoria. O período usa datas inclusivas em São Paulo e filtra criação dos registros ou confirmação dos contratos; vigência sempre usa a data local atual. Próximos vencimentos incluem somente contratos vigentes cujo fim exclusivo esteja em até 30 dias. Cards contam todos os resultados e listas exibem até cinco registros. “Ver todos” abre a listagem completa sem transportar os filtros do painel.
-
-As consultas reutilizam os escopos de propriedade e carregam relacionamentos antecipadamente. `DashboardTest` confere isolamento, cliente sem dados, filtros, limites de 30 dias, meia-noite local e quantidade de consultas estável ao aumentar o número de registros. Não há tabela de indicadores persistidos.
-
-## Reconstrução do banco local de testes
-
-Em uma instalação nova no macOS, prepare o PostgreSQL e o banco exclusivo de testes, se ainda não existirem:
+No macOS, inicie o PostgreSQL:
 
 ```bash
 brew services start postgresql@15
 psql postgres
 ```
 
-No console PostgreSQL, com uma conta que possa criar usuários e bancos:
+Com uma conta autorizada a criar usuários e bancos, execute somente se ainda não existirem:
 
 ```sql
 CREATE ROLE theseguro LOGIN;
@@ -309,22 +246,52 @@ CREATE DATABASE theseguro_dev OWNER theseguro;
 \q
 ```
 
-Configure a senha em `.env.testing`, mantendo o arquivo fora do Git. Para reconstruir **somente esse banco local descartável**, apagando suas tabelas e recriando a carga demonstrativa:
+Prepare o ambiente de testes:
+
+```bash
+test -f .env.testing || cp .env.testing.example .env.testing
+```
+
+Preencha `DB_PASSWORD` em `.env.testing`. Ao criar esse arquivo pela primeira vez, gere sua chave:
+
+```bash
+php artisan key:generate --env=testing
+```
+
+Execute as verificações:
+
+```bash
+php artisan config:clear
+vendor/bin/phpunit
+nvm use
+node --test tests/Frontend/vehicle-lookup.test.mjs
+vendor/bin/pint --test app tests
+composer validate --strict
+composer check-platform-reqs
+php artisan view:cache
+npm run build
+```
+
+A configuração recusa banco remoto, banco diferente de `theseguro_dev` e configuração em cache. Requisições HTTP externas são bloqueadas nos testes. A suíte pode recriar tabelas do banco local.
+
+Última validação completa, em 12/11/2026: **129 testes PHP, 826 asserções e 5 testes JavaScript aprovados**, além de build, compilação Blade, formatação e requisitos Composer. A cobertura inclui permissões, isolamento entre clientes, validações, histórico das propostas, transições, rollback, vigência e comportamento da consulta de placa.
+
+### Reconstrução do banco de testes
+
+Para apagar as tabelas locais de testes e recriar a estrutura com dados demonstrativos:
 
 ```bash
 php scripts/rebuild-testing.php
 ```
 
-O script executa `migrate:fresh --seed`, fixa `testing`, PostgreSQL, `127.0.0.1:5432` e `theseguro_dev`, e rejeita configuração em cache ou conexão divergente antes da operação. Ele utiliza as credenciais de `.env.testing`; não altera a Neon. Não use `migrate:fresh` diretamente no banco da aplicação.
+O script fixa o ambiente `testing` e o banco `theseguro_dev` em `127.0.0.1:5432`, rejeitando configurações divergentes antes de executar `migrate:fresh --seed`. A reconstrução não utiliza o banco Neon. Não execute esse comando para preservar dados locais de testes.
 
-Reconstrução validada em 12/11/2026: 10 migrations; 4 usuários, 2 veículos, 2 serviços, 2 planos, 3 vínculos, 6 propostas, 2 contratos e 3 solicitações. As datas demonstrativas são relativas à primeira carga. As verificações de consistência não encontraram órfãos, duplicações de vínculos/contratos, divergências de estado ou históricos incompletos. Testes posteriores podem limpar a carga local; repita o script se precisar inspecioná-la no pgAdmin.
+## Limitações
 
-## Validação e limitações da entrega
-
-- 129 testes PHP, 826 asserções e 5 testes JavaScript aprovados; build, Blade, formatação e requisitos Composer verificados.
-- Totais do painel comparados com consultas SQL na Neon e no banco local reconstruído. Dados extras cadastrados manualmente são preservados.
-- Fluxos de autenticação e catálogo conferidos manualmente. A revisão visual final do painel e dos fluxos posteriores ao catálogo ainda está pendente.
-- Consulta de placa permanece em simulação; nenhuma chamada real ao fornecedor foi validada. Recuperação de senha usa notificações simuladas nos testes; envio real de e-mail não foi configurado.
-- Contratos e assistências são fictícios. Não houve teste de carga concorrente, implantação em servidor público ou publicação automática.
-
-Consultas auxiliares e roteiros de evidência ficam no ambiente local em `docs/`, diretório ignorado pelo Git. As migrations, seeders, testes e o script de reconstrução fazem parte do repositório. Autoria e contribuições estão registradas no histórico Git.
+- Contratos, valores e assistências são demonstrativos, sem emissão de apólice ou despacho real.
+- O envio real de e-mails precisa ser configurado; a recuperação de senha é testada com notificações simuladas.
+- A FipeAPI depende da disponibilidade e da cota do fornecedor; o cadastro manual permanece disponível.
+- As alterações críticas usam transações e bloqueios. Não foi realizado teste de carga concorrente.
+- A validação visual não cobre integralmente todas as telas e resoluções.
+- As versões PostgreSQL local e Neon diferem; os testes locais não garantem equivalência completa entre os ambientes.
+- A execução documentada usa o servidor local do Laravel. A publicação em servidor público não faz parte deste guia.
